@@ -96,10 +96,12 @@ AmpLookAndFeel::AmpLookAndFeel (const AmpTheme& t) : theme (t)
     setColour (juce::TextEditor::highlightColourId, theme.accent.withAlpha (0.35f));
     setColour (juce::CaretComponent::caretColourId, theme.accent);
 
-    setColour (juce::ComboBox::textColourId, theme.accent.brighter (0.4f));
+    // Combo boxes are drawn as dark read-outs, so their text must stay light.
+    const auto comboText = theme.accent.getPerceivedBrightness() < 0.45f ? Colour (0xffeeeeee) : theme.accent.brighter (0.4f);
+    setColour (juce::ComboBox::textColourId, comboText);
     setColour (juce::ComboBox::backgroundColourId, theme.readout);
     setColour (juce::ComboBox::outlineColourId, juce::Colours::black);
-    setColour (juce::ComboBox::arrowColourId, theme.accent);
+    setColour (juce::ComboBox::arrowColourId, comboText);
 
     setColour (juce::PopupMenu::backgroundColourId, Colour (0xff1b1b1e));
     setColour (juce::PopupMenu::textColourId, Colour (0xffe6e6e6));
