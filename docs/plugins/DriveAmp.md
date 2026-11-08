@@ -50,7 +50,7 @@ are level-matched with each other.
 **Load IR...** accepts `.wav`, `.aiff` or `.flac` impulse responses (mono or
 stereo, any sample rate, up to 1 second). The IR is level-matched to the
 built-in cabinets so switching doesn't jump in volume, and the file path is
-saved with your Live set. Choose *Off* to use an external cabinet plugin.
+saved with your project. Choose *Off* to use an external cabinet plugin.
 
 ## Tips
 
