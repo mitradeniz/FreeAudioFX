@@ -2,6 +2,7 @@
 
 #include "TestFramework.h"
 #include "TestSignals.h"
+#include "TestSuites.h"
 
 #include "fx/Effect.h"
 #include "fx/FxEngines.h"

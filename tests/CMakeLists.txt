@@ -4,6 +4,9 @@ juce_add_console_app(oap_dsp_tests PRODUCT_NAME "oap_dsp_tests")
 target_sources(oap_dsp_tests PRIVATE
     DspTests.cpp
     FxTests.cpp
+    EffectAmpTests.cpp
+    "${CMAKE_SOURCE_DIR}/shared/amps/AmpModels.cpp"
+    "${CMAKE_SOURCE_DIR}/shared/amps/EffectAmpEngine.cpp"
     "${CMAKE_SOURCE_DIR}/plugins/DriveAmp/Source/DriveAmpEngine.cpp"
     "${CMAKE_SOURCE_DIR}/plugins/CleanAmp/Source/CleanAmpEngine.cpp")
 

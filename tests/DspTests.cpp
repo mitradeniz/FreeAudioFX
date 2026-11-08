@@ -9,6 +9,7 @@
 #include "CleanAmpEngine.h"
 #include "DriveAmpEngine.h"
 #include "TestFramework.h"
+#include "TestSuites.h"
 #include "TestSignals.h"
 
 #include <chrono>
@@ -603,7 +604,6 @@ void renderDemos (const juce::File& dir)
 
 } // namespace
 
-void runFxTests(); // FxTests.cpp
 
 //==============================================================================
 int main (int argc, char** argv)
@@ -659,6 +659,7 @@ int main (int argc, char** argv)
             renderDemos (juce::File::getCurrentWorkingDirectory().getChildFile (argv[i + 1]));
 
     runFxTests();
+    runEffectAmpTests();
 
     std::printf ("\n%d checks, %d failures\n", testing::checks, testing::failures);
     return testing::failures == 0 ? 0 : 1;
