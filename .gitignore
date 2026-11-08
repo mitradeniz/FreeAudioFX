@@ -1,0 +1,20 @@
+# Build output
+build/
+build-*/
+cmake-build-*/
+out/
+
+# Demo renders from the test runner
+demos/
+
+# IDE / editor
+.vscode/
+.idea/
+*.xcworkspace/
+xcuserdata/
+.cache/
+compile_commands.json
+
+# OS
+.DS_Store
+Thumbs.db
