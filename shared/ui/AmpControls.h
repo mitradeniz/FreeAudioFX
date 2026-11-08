@@ -45,6 +45,23 @@ private:
 };
 
 //==============================================================================
+/** A labelled drop-down for choice parameters (modes, types, sync values). */
+class AmpChoice : public juce::Component
+{
+public:
+    AmpChoice (juce::AudioProcessorValueTreeState&, const juce::String& parameterId, const juce::String& caption);
+
+    void paint (juce::Graphics&) override;
+    void resized() override;
+
+    juce::ComboBox box;
+
+private:
+    juce::String caption;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> attachment;
+};
+
+//==============================================================================
 /** Cabinet selector plus impulse-response loader. */
 class CabinetPanel : public juce::Component, private juce::Timer
 {

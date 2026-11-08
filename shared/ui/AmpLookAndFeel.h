@@ -25,6 +25,13 @@ struct AmpTheme
 
     static AmpTheme drive();
     static AmpTheme clean();
+
+    /** Theme for a stompbox enclosure of the given colour (text colours adapt to it). */
+    static AmpTheme pedal (juce::Colour enclosure);
+
+    /** Theme built from a few key colours (used by the effect amps). */
+    static AmpTheme custom (juce::Colour background, juce::Colour plateTop, juce::Colour plateBottom,
+                            juce::Colour accent, bool darkText);
 };
 
 //==============================================================================

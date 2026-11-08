@@ -82,6 +82,32 @@ void AmpSwitch::resized()
 }
 
 //==============================================================================
+AmpChoice::AmpChoice (juce::AudioProcessorValueTreeState& state, const juce::String& parameterId, const juce::String& captionText)
+    : caption (captionText)
+{
+    if (auto* choice = dynamic_cast<juce::AudioParameterChoice*> (state.getParameter (parameterId)))
+        box.addItemList (choice->choices, 1);
+    box.setTitle (captionText);
+    addAndMakeVisible (box);
+    attachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (state, parameterId, box);
+}
+
+void AmpChoice::paint (juce::Graphics& g)
+{
+    const auto& t = themeOf (*this);
+    g.setFont (AmpLookAndFeel::font (12.0f, true).withExtraKerningFactor (0.08f));
+    g.setColour (t.panelText);
+    g.drawFittedText (caption.toUpperCase(), getLocalBounds().removeFromTop (18), juce::Justification::centred, 1, 0.75f);
+}
+
+void AmpChoice::resized()
+{
+    auto r = getLocalBounds();
+    r.removeFromTop (20);
+    box.setBounds (r.withSizeKeepingCentre (juce::jmin (r.getWidth() - 8, 120), juce::jmin (r.getHeight(), 28)));
+}
+
+//==============================================================================
 CabinetPanel::CabinetPanel (AmpProcessorBase& p) : processor (p)
 {
     cabinetBox.addItemList (dsp::CabinetSection::getTypeNames(), 1);

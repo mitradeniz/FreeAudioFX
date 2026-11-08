@@ -42,6 +42,46 @@ AmpTheme AmpTheme::clean()
     return t;
 }
 
+AmpTheme AmpTheme::pedal (Colour enclosure)
+{
+    const float brightness = enclosure.getPerceivedBrightness();
+    const bool lightPaint = brightness > 0.6f;
+    const bool veryDark = brightness < 0.22f;
+
+    AmpTheme t;
+    t.background   = Colour (0xff141518);
+    t.panelTop     = enclosure.brighter (0.18f);
+    t.panelBottom  = enclosure.darker (0.35f);
+    t.panelEdge    = enclosure.darker (0.9f);
+    t.panelText    = lightPaint ? Colour (0xff1c1c1c) : Colour (0xfff4f4f2);
+    t.panelTextDim = t.panelText.withAlpha (0.7f);
+    t.accent       = veryDark ? Colour (0xffff5a1f) : (lightPaint ? enclosure.darker (1.2f) : Colour (0xfff7f7f7));
+    t.knobBody     = Colour (0xff141414);
+    t.knobSkirt    = Colour (0xffc4c8cd);
+    t.knobPointer  = Colour (0xfff4f4f4);
+    t.headerText   = Colour (0xffe9e9e9);
+    t.readout      = Colour (0xff111113);
+    return t;
+}
+
+AmpTheme AmpTheme::custom (Colour background, Colour plateTop, Colour plateBottom, Colour accent, bool darkText)
+{
+    AmpTheme t;
+    t.background   = background;
+    t.panelTop     = plateTop;
+    t.panelBottom  = plateBottom;
+    t.panelEdge    = plateBottom.darker (0.8f);
+    t.panelText    = darkText ? Colour (0xff201e1b) : Colour (0xffeeeeec);
+    t.panelTextDim = darkText ? Colour (0xff6a655c) : Colour (0xff8f9298);
+    t.accent       = accent;
+    t.knobBody     = darkText ? Colour (0xff151515) : Colour (0xff17171a);
+    t.knobSkirt    = darkText ? Colour (0xffc3c7cc) : Colour (0xff5f636b);
+    t.knobPointer  = Colour (0xfff4f4f4);
+    t.headerText   = Colour (0xfff0ede6);
+    t.readout      = Colour (0xff0d0d0f);
+    return t;
+}
+
 //==============================================================================
 AmpLookAndFeel::AmpLookAndFeel (const AmpTheme& t) : theme (t)
 {

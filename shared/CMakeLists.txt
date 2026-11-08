@@ -34,7 +34,9 @@ oap_configure_static_library(oap_fx)
 set(oap_ui_sources
     "${CMAKE_CURRENT_SOURCE_DIR}/ui/AmpLookAndFeel.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/ui/AmpControls.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/plugin/AmpProcessorBase.cpp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/ui/PedalEditor.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/plugin/AmpProcessorBase.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/plugin/PedalProcessor.cpp")
 
 if(OAP_SHARED_JUCE)
     # Compiled once and linked into every plugin.
