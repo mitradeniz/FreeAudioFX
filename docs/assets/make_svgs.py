@@ -104,7 +104,7 @@ def hero():
 <!-- title -->
 <text x="64" y="118" font-family="{FONT}" font-weight="800" font-size="70" fill="#f5f5f5">Open Audio</text>
 <text x="64" y="192" font-family="{FONT}" font-weight="800" font-size="70" fill="url(#title)">Plugins</text>
-<text x="66" y="238" font-family="{FONT}" font-size="23" fill="#a9abb2">Free guitar amps &amp; effects for your DAW</text>
+<text x="66" y="238" font-family="{FONT}" font-size="23" fill="#a9abb2">33 free amps &amp; pedals for your DAW</text>
 
 <!-- chips -->
 <g font-family="{FONT}" font-size="15" font-weight="700">
@@ -209,8 +209,8 @@ def signal_flow():
         cables.append(f'<line x1="{x0}" y1="{cy}" x2="{x1}" y2="{cy}" stroke="#34343a" stroke-width="8" stroke-linecap="round"/>')
         cables.append(f'<line class="flow" x1="{x0}" y1="{cy}" x2="{x1}" y2="{cy}" stroke="{accents[i]}" stroke-width="4" stroke-linecap="round" stroke-dasharray="4 14"/>')
 
-    labels = [("1", "Plug in", "your guitar"), ("2", "Audio", "interface"), ("3", "Ableton Live", "audio track"),
-              ("4", "OAP amp", "on the track"), ("5", "Rock out!", "headphones / monitors")]
+    labels = [("1", "Plug in", "your guitar"), ("2", "Audio", "interface"), ("3", "Your DAW", "audio track"),
+              ("4", "OAP plugins", "amp, pedals, board"), ("5", "Rock out!", "headphones / monitors")]
     lab = []
     for (n, a, b), x in zip(labels, xs):
         acc = ORANGE if n in ("4", "5") else TEAL
@@ -219,7 +219,7 @@ def signal_flow():
         lab.append(f'<text x="{x}" y="{cy+card/2+34}" text-anchor="middle" font-family="{FONT}" font-weight="700" font-size="19" fill="#f0f0f0">{a}</text>')
         lab.append(f'<text x="{x}" y="{cy+card/2+56}" text-anchor="middle" font-family="{FONT}" font-size="15" fill="#9a9ca3">{b}</text>')
 
-    s = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" role="img" aria-label="Guitar into audio interface into Ableton Live, through the OAP amp, out to headphones">
+    s = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" role="img" aria-label="Guitar into audio interface into a DAW audio track, through the OAP plugins, out to headphones">
 <title>How the signal flows</title>
 <style>
   .flow {{ animation: flow .9s linear infinite; }}
@@ -267,9 +267,9 @@ def terminal():
         ("out", "-- Downloading JUCE 9.0.5 ... done", "#9a9ca3"),
         ("cmd", "cmake --build build"),
         ("bar",),
-        ("out", "✔ OAP Drive Amp  → ~/Library/Audio/Plug-Ins", "#ff7a45"),
-        ("out", "✔ OAP Clean Amp  → ~/Library/Audio/Plug-Ins", "#2fd1bf"),
-        ("out", "Done! Open Ableton Live and rescan your plug-ins.", "#f5f5f5"),
+        ("out", "✔ 12 amps (VST3 + AU) → ~/Library/Audio/Plug-Ins", "#ff7a45"),
+        ("out", "✔ 20 pedals + Pedalboard → ~/Library/Audio/Plug-Ins", "#2fd1bf"),
+        ("out", "Done! Open your DAW and rescan your plug-ins.", "#f5f5f5"),
     ]
     CW, LH, X0, Y0 = 9.6, 30, 36, 86
     TOTAL = 18.0
