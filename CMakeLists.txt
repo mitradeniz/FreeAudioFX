@@ -46,6 +46,7 @@ if(OAP_BUILD_PLUGINS)
     add_subdirectory(plugins/DriveAmp)
     add_subdirectory(plugins/CleanAmp)
     add_subdirectory(plugins/pedals)
+    add_subdirectory(plugins/Pedalboard)
 endif()
 
 if(OAP_BUILD_TESTS)

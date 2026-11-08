@@ -8,6 +8,7 @@
 
 #include "fx/Effect.h"
 #include "plugin/PedalProcessor.h"
+#include "plugin/PedalboardProcessor.h"
 
 #include <cstdio>
 
@@ -41,6 +42,12 @@ int main (int argc, char** argv)
     {
         oap::PedalProcessor pedal (info->id);
         save (pedal, dir.getChildFile ("pedal-" + juce::String (info->id) + ".png"), scale);
+    }
+
+    {
+        oap::PedalboardProcessor board;
+        board.prepareToPlay (48000.0, 512);
+        save (board, dir.getChildFile ("pedalboard.png"), scale);
     }
 
     return 0;
