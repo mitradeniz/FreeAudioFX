@@ -5,30 +5,99 @@
 ```text
 FreeAudioFX/
 ├── CMakeLists.txt              # top level: JUCE, shared code, plugins, tests
-├── cmake/OapPlugin.cmake       # oap_add_plugin() - common plugin settings
+├── cmake/
+│   ├── OapJuce.cmake           # compiles JUCE once (oap_juce) for every plugin
+│   └── OapPlugin.cmake         # oap_add_plugin() - common plugin settings
 ├── shared/
-│   ├── dsp/                    # reusable DSP blocks (header-only, mostly plain C++17)
+│   ├── dsp/                    # amp DSP blocks (header-only, mostly plain C++17)
 │   │   ├── Filters.h           # TPT one-pole, RBJ biquads, envelope follower
 │   │   ├── TubeStage.h         # triode curve, preamp gain stage, power amp with sag
 │   │   ├── ToneStack.h         # passive TMB tone stack (Yeh/Smith model)
 │   │   ├── NoiseGate.h         # hysteresis/hold noise gate
 │   │   ├── CabinetModel.h      # filter-based cabinet voicings
 │   │   └── CabinetSection.h    # voicings + user IR convolution, click-free switching
-│   ├── plugin/AmpProcessorBase # buses, state, IR loading, bypass latency
-│   └── ui/                     # look-and-feel, knobs, switches, cab panel, scalable editor
+│   ├── fx/                     # effects library (plain C++17, no JUCE): every pedal
+│   │   ├── Effect.h            # ParamSpec, EffectInfo, Effect base class, registry API
+│   │   ├── FxDsp.h             # delay line, LFO, SVF, all-passes, oversampler, mix laws
+│   │   ├── FxEngines.h         # FDN reverb, spring reverb, pitch shifter
+│   │   ├── *Effects.cpp        # the 20 effects, grouped by family
+│   │   └── Registry.cpp        # display order, lookup, factory
+│   ├── amps/                   # effect amps
+│   │   ├── AmpModel.h          # what an effect amp is: voicing, effects, FX knobs, colours
+│   │   ├── AmpModels.cpp       # the ten effect amps
+│   │   ├── EffectAmpEngine.*   # the signal path built from a model
+│   │   └── EffectAmp{Processor,Editor}.*  # generic plugin wrapper and faceplate
+│   ├── plugin/                 # AmpProcessorBase, PedalProcessor, PedalboardProcessor
+│   └── ui/                     # look-and-feel, knobs, switches, cab panel, pedal and board editors
 ├── plugins/
 │   ├── DriveAmp/Source/        # DriveAmpEngine (DSP), parameters, processor, editor
-│   └── CleanAmp/Source/        # CleanAmpEngine (DSP), parameters, processor, editor
-├── tests/                      # console test runner for the DSP
+│   ├── CleanAmp/Source/        # CleanAmpEngine (DSP), parameters, processor, editor
+│   ├── effectamps/             # 10 targets from one source file
+│   ├── pedals/                 # 20 targets from one source file
+│   └── Pedalboard/
+├── tests/                      # console test runner (amps, effects, effect amps)
+├── tools/Snapshots.cpp         # renders editors to PNG for the docs
 └── docs/
 ```
 
-Each plugin keeps its complete signal path in an **engine** class
-(`DriveAmpEngine`, `CleanAmpEngine`) that knows nothing about the plugin
-wrapper. The processor only reads parameters and calls `engine.process()`, and
-the tests drive the engines directly.
+The DSP always lives in classes that know nothing about the plugin wrapper:
+the amp **engines** (`DriveAmpEngine`, `CleanAmpEngine`, `EffectAmpEngine`) and
+the **effects** in `shared/fx`. Processors only read parameters and call
+`process()`, and the tests drive the DSP directly.
 
-## Adding a new plugin
+The pedals, the effect amps and the Pedalboard are **data-driven**: their
+parameters, editors and saved state are generated from an `EffectInfo` or an
+`AmpModel`, so most new plugins need no UI or wrapper code at all.
+
+## Adding a pedal
+
+1. Write the effect in the matching `shared/fx/*Effects.cpp` file: a class
+   derived from `fx::Effect` with a static `describe()` returning its
+   `EffectInfo` (id, name, category, one-line description, enclosure colour,
+   advanced flag, and at most six `ParamSpec`s), plus `prepare()`, `reset()`
+   and `process()` for one or two channels.
+2. Register it in the file's `add…Effects()` function and add its id to the
+   **end** of `displayOrder` in `Registry.cpp` (the Pedalboard's *Pedal*
+   parameters store positions in this list, so inserting in the middle would
+   change pedals in saved sessions).
+3. Add one line to `plugins/pedals/CMakeLists.txt`:
+
+   ```cmake
+   oap_add_pedal(MyPedal myeffect "OAP My Effect" Myfx "What it does" Fx Modulation)
+   ```
+
+That's it: the pedal plugin, its stompbox editor and its Pedalboard slot all
+come from the description. The effect is also available to the effect amps.
+Run the tests: `FxTests.cpp` automatically stress-tests, level-checks and
+benchmarks every registered effect.
+
+## Adding an effect amp
+
+1. Add a function to `shared/amps/AmpModels.cpp` that fills an `AmpModel`, and
+   list it in `allAmpModels()`:
+   - `voicing`: input high-pass, bright and pre-mid EQ, one to four
+     `TubeStage` settings (gain, bias, coupling, bandwidth), Gain knob range,
+     tone stack (`bassman`, `british`, `blackface`), post EQ, power amp sag,
+     4x or 8x oversampling, an optional gate and the default cabinet;
+   - `effects`: effects from the library, before or after the amp, with the
+     parameters that stay fixed;
+   - `fxControls`: two to five extra knobs (`ParamSpec`s), and
+     `applyControls`, which maps them onto the effects' parameters every block;
+   - `look`: background, faceplate and accent colours.
+2. Add one line to `plugins/effectamps/CMakeLists.txt`:
+
+   ```cmake
+   oap_add_effect_amp(MyAmp myamp "OAP My Amp" Myam "What it sounds like")
+   ```
+
+3. Run the tests. `EffectAmpTests.cpp` checks that every effect and parameter
+   name in the model exists, that every FX knob changes the sound, stability,
+   decay to silence and loudness. Adjust `voicing.outputTrim` until the
+   default level lands in the collection's window (clean amps around -19 dB
+   RMS, driven ones around -15 dB RMS), and use `gainCompensation` /
+   `masterCompensation` if the top of the Gain or Master range gets too loud.
+
+## Adding a completely new plugin
 
 1. Create `plugins/MyEffect/` with `Source/` and a `CMakeLists.txt`:
 
@@ -42,8 +111,11 @@ the tests drive the engines directly.
    ```
 
 2. Add `add_subdirectory(plugins/MyEffect)` to the top-level `CMakeLists.txt`.
-3. Never change a released plugin's `PLUGIN_CODE` or parameter IDs - hosts use
-   them to find the plugin and restore sessions/automation.
+
+> [!IMPORTANT]
+> Never change a released plugin's `PLUGIN_CODE`, effect or model **id**, or
+> parameter IDs: hosts use them to find the plugin and to restore sessions and
+> automation.
 
 ## Real-time rules for DSP code
 
@@ -56,19 +128,22 @@ the tests drive the engines directly.
   `prepare()` (some hosts do this).
 - Guard against denormals (`juce::ScopedNoDenormals` in `processBlock`, and
   flush decaying states to zero).
+- Report latency and tail length to the host.
+- Portability: the code is built with GCC, Clang and MSVC on three platforms.
+  Don't pass explicit template arguments to `juce::jmax`/`jmin`/`jlimit`
+  (some instantiations don't exist on ARM); use `std::max<T>` instead.
 
 ## Tests
 
-`tests/DspTests.cpp` checks, among other things:
+`tests/` builds one console runner, `oap_dsp_tests`:
 
-- biquad designs and the tone stack model (the passive network must never
-  exceed 0 dB, and every control must move the right frequencies),
-- stability with randomised parameter automation at 44.1-192 kHz and block
-  sizes from 1 to 2048 samples,
-- decay to true silence (no denormal noise or DC),
-- noise-gate behaviour, output levels, distortion amounts, aliasing,
-- IR loading, level matching and click-free cabinet switching,
-- CPU cost.
+- `DspTests.cpp`: biquads, the tone stack model, cabinets and IRs, the Drive
+  and Clean amps (stability at 44.1-192 kHz and block sizes 1-2048, silence,
+  gate, levels, distortion amounts, aliasing, click-free cabinet switching, CPU),
+- `FxTests.cpp`: the effect building blocks and every effect (parameter specs,
+  stress with random automation, decay to silence, levels, CPU),
+- `EffectAmpTests.cpp`: every effect amp (model validity, stress, silence,
+  calibrated levels, FX knobs, gates).
 
 Run it after every DSP change. For host-level testing,
 [pluginval](https://github.com/Tracktion/pluginval) is recommended:
@@ -79,7 +154,14 @@ pluginval --strictness-level 10 --validate "path/to/OAP Drive Amp.vst3"
 
 ## Tuning the sound
 
-The voicing constants (stage gains, biases, filter corners, knob ranges) live
-at the top of each engine's `.cpp` file and in its `prepare()` method. Change
-them, rebuild the Standalone app, play, repeat - then re-run the tests so the
-level and aliasing checks still pass.
+The voicing constants live at the top of each engine's `.cpp` file and in its
+`prepare()` method (Drive and Clean amps), in the model entries in
+`AmpModels.cpp` (effect amps), and in each effect's class in `shared/fx`.
+Change them, rebuild the Standalone app or the plugin, play, repeat, then
+re-run the tests so the level and stability checks still pass.
+
+## Commits
+
+The project is public, so commit messages are in English: a short imperative
+subject ("Add tape echo pedal", "Fix denormals in the spring reverb"), a blank
+line, then what changed and why.
