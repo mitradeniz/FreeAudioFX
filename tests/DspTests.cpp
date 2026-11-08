@@ -8,6 +8,7 @@
 
 #include "CleanAmpEngine.h"
 #include "DriveAmpEngine.h"
+#include "TestFramework.h"
 #include "TestSignals.h"
 
 #include <chrono>
@@ -20,21 +21,10 @@ using namespace testsignals;
 
 namespace
 {
-int failures = 0, checks = 0;
+using testing::section;
+using testing::db;
 
-void check (bool ok, const juce::String& what)
-{
-    ++checks;
-    if (! ok)
-    {
-        ++failures;
-        std::printf ("  FAIL: %s\n", what.toRawUTF8());
-    }
-}
-
-void section (const char* name) { std::printf ("\n== %s\n", name); }
-
-double db (double gain) { return 20.0 * std::log10 (gain + 1.0e-30); }
+void check (bool ok, const juce::String& what) { testing::check (ok, what.toStdString()); }
 
 //==============================================================================
 template <typename Engine>
@@ -613,6 +603,8 @@ void renderDemos (const juce::File& dir)
 
 } // namespace
 
+void runFxTests(); // FxTests.cpp
+
 //==============================================================================
 int main (int argc, char** argv)
 {
@@ -666,6 +658,8 @@ int main (int argc, char** argv)
         if (juce::String (argv[i]) == "--render")
             renderDemos (juce::File::getCurrentWorkingDirectory().getChildFile (argv[i + 1]));
 
-    std::printf ("\n%d checks, %d failures\n", checks, failures);
-    return failures == 0 ? 0 : 1;
+    runFxTests();
+
+    std::printf ("\n%d checks, %d failures\n", testing::checks, testing::failures);
+    return testing::failures == 0 ? 0 : 1;
 }
