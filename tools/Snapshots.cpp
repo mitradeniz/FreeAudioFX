@@ -6,6 +6,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "amps/EffectAmpProcessor.h"
 #include "fx/Effect.h"
 #include "plugin/PedalProcessor.h"
 #include "plugin/PedalboardProcessor.h"
@@ -42,6 +43,13 @@ int main (int argc, char** argv)
     {
         oap::PedalProcessor pedal (info->id);
         save (pedal, dir.getChildFile ("pedal-" + juce::String (info->id) + ".png"), scale);
+    }
+
+    for (const auto& model : oap::amps::allAmpModels())
+    {
+        oap::amps::EffectAmpProcessor amp (model.id);
+        amp.prepareToPlay (48000.0, 512);
+        save (amp, dir.getChildFile ("amp-" + juce::String (model.id) + ".png"), scale);
     }
 
     {
