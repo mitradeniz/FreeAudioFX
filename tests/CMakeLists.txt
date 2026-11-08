@@ -21,3 +21,12 @@ target_link_libraries(oap_dsp_tests PRIVATE
 set_target_properties(oap_dsp_tests PROPERTIES FOLDER "tests")
 
 add_test(NAME oap_dsp_tests COMMAND oap_dsp_tests)
+
+# Renders plugin editors to PNG for the documentation (not run as a test).
+juce_add_console_app(oap_snapshots PRODUCT_NAME "oap_snapshots")
+target_sources(oap_snapshots PRIVATE "${CMAKE_SOURCE_DIR}/tools/Snapshots.cpp")
+target_link_libraries(oap_snapshots PRIVATE
+    oap_shared_ui
+    oap_juce
+    juce::juce_recommended_config_flags)
+set_target_properties(oap_snapshots PROPERTIES FOLDER "tools")
