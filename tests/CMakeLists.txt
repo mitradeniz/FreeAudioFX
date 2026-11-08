@@ -10,14 +10,9 @@ target_include_directories(oap_dsp_tests PRIVATE
     "${CMAKE_SOURCE_DIR}/plugins/DriveAmp/Source"
     "${CMAKE_SOURCE_DIR}/plugins/CleanAmp/Source")
 
-target_compile_definitions(oap_dsp_tests PRIVATE
-    JUCE_WEB_BROWSER=0
-    JUCE_USE_CURL=0)
-
 target_link_libraries(oap_dsp_tests PRIVATE
     oap_shared_dsp
-    juce::juce_dsp
-    juce::juce_audio_formats
+    oap_juce
     juce::juce_recommended_config_flags
     juce::juce_recommended_warning_flags)
 

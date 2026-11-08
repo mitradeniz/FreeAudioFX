@@ -7,6 +7,9 @@ out/
 # Demo renders from the test runner
 demos/
 
+# Files saved by the Claude desktop app
+Claude outputs/
+
 # IDE / editor
 .vscode/
 .idea/

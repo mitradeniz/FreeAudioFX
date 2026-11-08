@@ -37,6 +37,7 @@ else()
     FetchContent_MakeAvailable(JUCE)
 endif()
 
+include(cmake/OapJuce.cmake)
 include(cmake/OapPlugin.cmake)
 
 add_subdirectory(shared)

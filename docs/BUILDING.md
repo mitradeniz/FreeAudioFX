@@ -32,8 +32,9 @@ cmake -B build -G Xcode
 cmake --build build --config Release
 ```
 
-A Release build uses link-time optimisation, so the final link step can take a
-few minutes. For quicker edit-and-test cycles use `-DCMAKE_BUILD_TYPE=RelWithDebInfo`.
+The JUCE framework is compiled only once and shared by every plugin in the
+collection, so adding more plugins adds little build time. For quicker
+edit-and-test cycles use `-DCMAKE_BUILD_TYPE=RelWithDebInfo`.
 
 ### 3. Where the plugins end up
 
@@ -109,6 +110,7 @@ then build exactly as on macOS. VST3 and Standalone are built.
 | `OAP_BUILD_TESTS` | `ON` | Build the DSP test runner. |
 | `OAP_COPY_PLUGINS` | `ON` on macOS | Copy plugins to the system plug-in folders after building. |
 | `OAP_UNIVERSAL_BINARY` | `OFF` | macOS: build for arm64 and x86_64. |
+| `OAP_SHARED_JUCE` | `ON` | Compile JUCE once for all plugins. Set to `OFF` to give every plugin its own copy (slower; the stock JUCE setup). |
 | `OAP_JUCE_PATH` | *(empty)* | Use a local JUCE checkout instead of downloading it. |
 
 ## Running the DSP tests
