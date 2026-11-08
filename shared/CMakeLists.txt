@@ -30,8 +30,13 @@ add_library(oap_fx STATIC
 target_link_libraries(oap_fx PUBLIC oap_shared_dsp)
 oap_configure_static_library(oap_fx)
 
-# Shared plugin base classes and UI components.
+# Shared plugin base classes and UI components, plus the effect amps (models,
+# engine, processor and editor).
 set(oap_ui_sources
+    "${CMAKE_CURRENT_SOURCE_DIR}/amps/AmpModels.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/amps/EffectAmpEngine.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/amps/EffectAmpProcessor.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/amps/EffectAmpEditor.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/ui/AmpLookAndFeel.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/ui/AmpControls.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/ui/PedalEditor.cpp"
