@@ -610,6 +610,15 @@ int main (int argc, char** argv)
 {
     juce::ScopedNoDenormals noDenormals;
 
+    // "--only looper" runs just that suite (handy while working on it)
+    for (int i = 1; i + 1 < argc; ++i)
+        if (juce::String (argv[i]) == "--only" && juce::String (argv[i + 1]) == "looper")
+        {
+            runLooperTests();
+            std::printf ("\n%d checks, %d failures\n", testing::checks, testing::failures);
+            return testing::failures == 0 ? 0 : 1;
+        }
+
     testBiquads();
     testToneStack();
     testCabinetModels();
@@ -660,6 +669,7 @@ int main (int argc, char** argv)
 
     runFxTests();
     runEffectAmpTests();
+    runLooperTests();
 
     std::printf ("\n%d checks, %d failures\n", testing::checks, testing::failures);
     return testing::failures == 0 ? 0 : 1;

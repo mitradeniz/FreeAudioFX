@@ -19,8 +19,10 @@ function(oap_configure_static_library target)
 endfunction()
 
 # Effects library (plain C++17, no JUCE): every pedal's DSP plus the registry
-# used by the pedal plugins, the Pedalboard and the effect amps.
+# used by the pedal plugins, the Pedalboard and the effect amps, and the
+# looper engine.
 add_library(oap_fx STATIC
+    looper/LooperEngine.cpp
     fx/Effect.cpp
     fx/Registry.cpp
     fx/DriveEffects.cpp

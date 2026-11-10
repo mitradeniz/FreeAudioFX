@@ -1,10 +1,11 @@
-# Console test runner for the amp DSP (no GUI, no plugin wrapper).
+# Console test runner for the DSP (no GUI, no plugin wrapper).
 juce_add_console_app(oap_dsp_tests PRODUCT_NAME "oap_dsp_tests")
 
 target_sources(oap_dsp_tests PRIVATE
     DspTests.cpp
     FxTests.cpp
     EffectAmpTests.cpp
+    LooperTests.cpp
     "${CMAKE_SOURCE_DIR}/shared/amps/AmpModels.cpp"
     "${CMAKE_SOURCE_DIR}/shared/amps/EffectAmpEngine.cpp"
     "${CMAKE_SOURCE_DIR}/plugins/DriveAmp/Source/DriveAmpEngine.cpp"
