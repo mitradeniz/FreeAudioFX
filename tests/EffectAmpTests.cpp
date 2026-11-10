@@ -109,7 +109,7 @@ void testModels()
         check (unknown == 0, m.id + ": all effect/parameter names in the model are valid (" + std::to_string (unknown) + " unknown)");
     }
 
-    check (allAmpModels().size() == 10, "ten effect amps");
+    check (allAmpModels().size() == 21, "21 effect amps");
     check (findAmpModel ("dream") != nullptr && findAmpModel ("nope") == nullptr, "findAmpModel");
 }
 
