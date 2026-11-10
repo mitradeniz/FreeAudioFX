@@ -5,9 +5,36 @@ namespace oap::amps
 
 ui::AmpTheme themeFor (const AmpModel& m)
 {
-    return ui::AmpTheme::custom (juce::Colour (m.look.background), juce::Colour (m.look.plateTop),
-                                 juce::Colour (m.look.plateBottom), juce::Colour (m.look.accent),
-                                 m.look.darkText);
+    auto t = ui::AmpTheme::custom (juce::Colour (m.look.background), juce::Colour (m.look.plateTop),
+                                   juce::Colour (m.look.plateBottom), juce::Colour (m.look.accent),
+                                   m.look.darkText);
+
+    // Artwork: shared/art/<id>.svg, plus the ornament drawn around the controls.
+    struct Style { const char* id; ui::Ornament ornament; float plateOpacity; };
+    using O = ui::Ornament;
+    static constexpr Style styles[] = {
+        { "dream",      O::halo,      0.68f }, { "dub",       O::rays,      0.74f },
+        { "spacedelay", O::orbit,     0.78f }, { "blackmetal", O::pentagram, 0.72f },
+        { "warmrock",   O::ornate,    0.78f }, { "surf",      O::stitch,    0.76f },
+        { "shoegaze",   O::halo,      0.70f }, { "arena",     O::neon,      0.70f },
+        { "stereojazz", O::ornate,    0.74f }, { "doom",      O::thorns,    0.74f },
+        { "crunch",     O::ornate,    0.74f }, { "eightbit",  O::pixel,     0.76f },
+        { "knight",     O::ornate,    0.74f }, { "heavymetal", O::bolts,    0.72f },
+        { "synthwave",  O::neon,      0.66f }, { "western",   O::stitch,    0.80f },
+        { "funk",       O::sparkles,  0.70f }, { "pharaoh",   O::rays,      0.78f },
+        { "sakura",     O::petals,    0.78f }, { "persian",   O::star,      0.74f },
+        { "choir",      O::rose,      0.78f },
+    };
+
+    for (const auto& s : styles)
+        if (m.id == s.id)
+        {
+            t.art = m.id;
+            t.ornament = s.ornament;
+            t.plateOpacity = s.plateOpacity;
+        }
+
+    return t;
 }
 
 namespace
@@ -70,7 +97,7 @@ namespace
         static int widthFor (const AmpModel& m)
         {
             const int controls = (m.voicing.hasGate ? 1 : 0) + 5 + (int) m.fxControls.size() + 1;
-            return juce::jmax (900, 140 + 86 * controls);
+            return juce::jmax (1000, 140 + 86 * controls); // wide enough for the logo, artwork and brand
         }
 
         template <typename ComponentType>

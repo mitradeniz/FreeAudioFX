@@ -6,6 +6,28 @@ namespace oap::ui
 {
 
 //==============================================================================
+/** Decorations drawn around the knobs, switches and selectors of an amp, so
+    the controls look like part of its artwork. */
+enum class Ornament
+{
+    none,
+    halo,       // soft glow
+    neon,       // bright tube ring
+    pixel,      // stepped 8-bit outline
+    thorns,     // spiky ring
+    ornate,     // double ring with beads
+    stitch,     // dashed leather stitching
+    petals,     // blossom petals
+    star,       // eight-pointed star
+    rays,       // sun rays
+    bolts,      // lightning bolts
+    pentagram,  // circle and inverted pentagram
+    orbit,      // tilted orbit with a moon
+    sparkles,   // disco sparkles
+    rose        // stained-glass rose window
+};
+
+//==============================================================================
 /** Colour scheme for one amp. Every plugin picks its own so they are easy to
     tell apart in a DAW, while sharing the same drawing code. */
 struct AmpTheme
@@ -22,6 +44,12 @@ struct AmpTheme
     juce::Colour knobPointer;
     juce::Colour headerText;   // logo on the cabinet covering
     juce::Colour readout;      // value read-out background
+
+    // Artwork (optional): an SVG from shared/art drawn across the whole amp,
+    // ornaments around the controls, and a see-through faceplate.
+    juce::String art;
+    Ornament ornament = Ornament::none;
+    float plateOpacity = 1.0f;
 
     static AmpTheme drive();
     static AmpTheme clean();
@@ -44,8 +72,18 @@ public:
 
     static juce::Font font (float height, bool bold = false);
 
-    /** Brushed faceplate with a bevel and corner screws. */
+    /** Brushed faceplate with a bevel and corner screws (see-through when the theme has artwork). */
     static void paintFaceplate (juce::Graphics&, juce::Rectangle<float> area, const AmpTheme&);
+
+    /** Radius of a knob's scale inside `bounds` (smaller when the theme draws ornaments, to leave room for them). */
+    static float dialRadius (juce::Rectangle<float> bounds, const AmpTheme&);
+
+    /** Draws the theme's ornament around a control. `area` is the circle just outside a knob's scale
+        (ornaments stay within 7 px of it), or the switch/selector bounds. */
+    static void paintOrnament (juce::Graphics&, juce::Rectangle<float> area, bool round, const AmpTheme&);
+
+    /** Loads one of the embedded artworks (shared/art/<name>.svg), or returns nullptr. */
+    static std::unique_ptr<juce::Drawable> loadArt (const juce::String& name);
 
     /** Textured covering (tolex) used as the editor background. */
     static void paintCovering (juce::Graphics&, juce::Rectangle<int> area, const AmpTheme&);

@@ -116,12 +116,39 @@ private:
         juce::Rectangle<int> bounds;
     };
 
+    struct OrnamentSpot
+    {
+        juce::Rectangle<float> area;
+        bool round;
+    };
+
+    /** Everything that doesn't move (artwork, faceplate, logo, ornaments), drawn
+        once into a cached image so turning a knob only redraws the knob. */
+    struct Backdrop : juce::Component
+    {
+        explicit Backdrop (AmpPanel& p) : panel (p)
+        {
+            setInterceptsMouseClicks (false, false);
+            setBufferedToImage (true);
+        }
+
+        void paint (juce::Graphics& g) override { panel.paintBackdrop (g); }
+
+        AmpPanel& panel;
+    };
+
     juce::Rectangle<int> getFaceplateArea() const;
     juce::Rectangle<int> getCabinetStripArea() const;
+    void paintBackdrop (juce::Graphics&);
+    void paintLogo (juce::Graphics&);
 
     AmpTheme theme;
     Branding branding;
+    std::unique_ptr<juce::Drawable> art;
+    int headerHeight = 80;
     std::vector<Group> groups;
+    std::vector<OrnamentSpot> ornamentSpots;
+    Backdrop backdrop { *this };
     CabinetPanel cabinetPanel;
 };
 

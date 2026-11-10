@@ -145,7 +145,7 @@ void CabinetPanel::paint (juce::Graphics& g)
     const auto& t = themeOf (*this);
     auto r = getLocalBounds().toFloat();
 
-    g.setColour (juce::Colours::black.withAlpha (0.35f));
+    g.setColour (juce::Colours::black.withAlpha (t.art.isNotEmpty() ? 0.58f : 0.35f));
     g.fillRoundedRectangle (r, 6.0f);
     g.setColour (juce::Colours::white.withAlpha (0.06f));
     g.drawRoundedRectangle (r.reduced (0.5f), 6.0f, 1.0f);
@@ -245,6 +245,14 @@ void CabinetPanel::chooseImpulseResponse()
 AmpPanel::AmpPanel (AmpProcessorBase& p, const AmpTheme& t, Branding b, int width, int height)
     : theme (t), branding (std::move (b)), cabinetPanel (p)
 {
+    art = AmpLookAndFeel::loadArt (theme.art);
+    if (art != nullptr)
+    {
+        headerHeight = 116; // more room for the artwork above the faceplate
+        height += headerHeight - 80;
+    }
+
+    addAndMakeVisible (backdrop);
     addAndMakeVisible (cabinetPanel);
     setSize (width, height);
 }
@@ -260,7 +268,7 @@ void AmpPanel::addGroup (const juce::String& caption, std::vector<juce::Componen
 
 juce::Rectangle<int> AmpPanel::getFaceplateArea() const
 {
-    return { 18, 80, getWidth() - 36, getHeight() - 80 - 88 };
+    return { 18, headerHeight, getWidth() - 36, getHeight() - headerHeight - 88 };
 }
 
 juce::Rectangle<int> AmpPanel::getCabinetStripArea() const
@@ -268,47 +276,100 @@ juce::Rectangle<int> AmpPanel::getCabinetStripArea() const
     return { 18, getHeight() - 70, getWidth() - 36, 52 };
 }
 
-void AmpPanel::paint (juce::Graphics& g)
+void AmpPanel::paint (juce::Graphics&)
 {
-    AmpLookAndFeel::paintCovering (g, getLocalBounds(), theme);
+    // Everything is drawn by the cached backdrop and the controls themselves.
+}
 
-    // logo
-    auto header = getLocalBounds().removeFromTop (80).reduced (30, 0);
+namespace
+{
+    /** Text with a dark outline, so it stays readable on top of artwork. */
+    void drawOutlinedText (juce::Graphics& g, const juce::String& text, const juce::Font& f, float x, float baseline,
+                           juce::Colour fill, float outline)
     {
-        const auto big = AmpLookAndFeel::font (34.0f, true).withExtraKerningFactor (0.08f);
-        const float accentW = juce::GlyphArrangement::getStringWidth (big, branding.modelAccent);
-        const float baseline = 46.0f;
+        juce::GlyphArrangement glyphs;
+        glyphs.addLineOfText (f, text, x, baseline);
+        juce::Path path;
+        glyphs.createPath (path);
 
+        if (outline > 0.0f)
+        {
+            g.setColour (juce::Colours::black.withAlpha (0.55f));
+            g.strokePath (path, juce::PathStrokeType (outline, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        }
+        g.setColour (fill);
+        g.fillPath (path);
+    }
+}
+
+void AmpPanel::paintLogo (juce::Graphics& g)
+{
+    const bool onArt = art != nullptr;
+    const float baseline = (float) headerHeight * 0.5f + 6.0f;
+    const float x = 30.0f;
+
+    const auto big = AmpLookAndFeel::font (onArt ? 38.0f : 34.0f, true).withExtraKerningFactor (0.08f);
+    const float accentW = juce::GlyphArrangement::getStringWidth (big, branding.modelAccent);
+
+    if (! onArt)
+    {
         g.setFont (big);
         g.setColour (juce::Colours::black.withAlpha (0.5f));
-        g.drawSingleLineText (branding.modelAccent, header.getX() + 2, (int) baseline + 2);
-        g.setColour (theme.accent);
-        g.drawSingleLineText (branding.modelAccent, header.getX(), (int) baseline);
-        g.setColour (theme.headerText);
-        g.drawSingleLineText (" " + branding.modelRest, header.getX() + (int) accentW, (int) baseline);
-
-        g.setFont (AmpLookAndFeel::font (11.5f, true).withExtraKerningFactor (0.25f));
-        g.setColour (theme.headerText.withAlpha (0.55f));
-        g.drawSingleLineText (branding.tagline, header.getX() + 2, (int) baseline + 20);
+        g.drawSingleLineText (branding.modelAccent, (int) x + 2, (int) baseline + 2);
     }
+
+    // On artwork a dark accent colour would disappear, so the logo gets a lighter shade of it.
+    auto logoColour = theme.accent;
+    if (onArt && logoColour.getPerceivedBrightness() < 0.5f)
+        logoColour = logoColour.withBrightness (juce::jmin (1.0f, logoColour.getBrightness() + 0.45f))
+                               .withSaturation (logoColour.getSaturation() * 0.85f);
+
+    drawOutlinedText (g, branding.modelAccent, big, x, baseline, logoColour, onArt ? 5.0f : 0.0f);
+    drawOutlinedText (g, " " + branding.modelRest, big, x + accentW, baseline, theme.headerText, onArt ? 5.0f : 0.0f);
+
+    const auto small = AmpLookAndFeel::font (11.5f, true).withExtraKerningFactor (0.25f);
+    drawOutlinedText (g, branding.tagline, small, x + 2.0f, baseline + 21.0f,
+                      theme.headerText.withAlpha (onArt ? 0.9f : 0.55f), onArt ? 3.0f : 0.0f);
 
     // brand + pilot light
+    const juce::Point<float> jewel ((float) getWidth() - 44.0f, baseline - 6.0f);
+    g.setColour (theme.accent.withAlpha (0.25f));
+    g.fillEllipse (juce::Rectangle<float> (30.0f, 30.0f).withCentre (jewel));
+    g.setGradientFill (juce::ColourGradient (theme.accent.brighter (0.8f), jewel.x - 3, jewel.y - 4,
+                                             theme.accent.darker (0.3f), jewel.x + 6, jewel.y + 7, true));
+    g.fillEllipse (juce::Rectangle<float> (16.0f, 16.0f).withCentre (jewel));
+    g.setColour (juce::Colours::black.withAlpha (0.7f));
+    g.drawEllipse (juce::Rectangle<float> (18.0f, 18.0f).withCentre (jewel), 2.0f);
+
+    const juce::String brand ("OPEN AUDIO PLUGINS");
+    const float brandW = juce::GlyphArrangement::getStringWidth (small, brand);
+    drawOutlinedText (g, brand, small, jewel.x - 26.0f - brandW, jewel.y + 4.0f,
+                      theme.headerText.withAlpha (onArt ? 0.9f : 0.65f), onArt ? 3.0f : 0.0f);
+}
+
+void AmpPanel::paintBackdrop (juce::Graphics& g)
+{
+    const auto bounds = getLocalBounds().toFloat();
+
+    if (art != nullptr)
     {
-        auto right = header.removeFromRight (260);
-        const juce::Point<float> jewel ((float) right.getRight() - 14.0f, 40.0f);
+        g.fillAll (theme.background);
+        auto content = art->getDrawableBounds();
+        if (auto* composite = dynamic_cast<juce::DrawableComposite*> (art.get()))
+            if (! composite->getContentArea().isEmpty())
+                content = composite->getContentArea();
 
-        g.setColour (theme.accent.withAlpha (0.25f));
-        g.fillEllipse (juce::Rectangle<float> (30.0f, 30.0f).withCentre (jewel));
-        g.setGradientFill (juce::ColourGradient (theme.accent.brighter (0.8f), jewel.x - 3, jewel.y - 4,
-                                                 theme.accent.darker (0.3f), jewel.x + 6, jewel.y + 7, true));
-        g.fillEllipse (juce::Rectangle<float> (16.0f, 16.0f).withCentre (jewel));
-        g.setColour (juce::Colours::black.withAlpha (0.7f));
-        g.drawEllipse (juce::Rectangle<float> (18.0f, 18.0f).withCentre (jewel), 2.0f);
-
-        g.setFont (AmpLookAndFeel::font (11.5f, true).withExtraKerningFactor (0.25f));
-        g.setColour (theme.headerText.withAlpha (0.65f));
-        g.drawText ("OPEN AUDIO PLUGINS", right.withTrimmedRight (36), juce::Justification::centredRight, false);
+        const auto fit = juce::RectanglePlacement (juce::RectanglePlacement::xMid | juce::RectanglePlacement::yTop
+                                                   | juce::RectanglePlacement::fillDestination)
+                             .getTransformToFit (content, bounds);
+        art->draw (g, 1.0f, fit);
     }
+    else
+    {
+        AmpLookAndFeel::paintCovering (g, getLocalBounds(), theme);
+    }
+
+    paintLogo (g);
 
     const auto plate = getFaceplateArea().toFloat();
     AmpLookAndFeel::paintFaceplate (g, plate, theme);
@@ -329,14 +390,21 @@ void AmpPanel::paint (juce::Graphics& g)
         g.drawLine (x + 1.0f, plate.getY() + 26.0f, x + 1.0f, plate.getBottom() - 26.0f, 1.0f);
         g.setColour (theme.panelEdge.withAlpha (0.35f));
     }
+
+    for (const auto& spot : ornamentSpots)
+        AmpLookAndFeel::paintOrnament (g, spot.area, spot.round, theme);
 }
 
 void AmpPanel::resized()
 {
+    backdrop.setBounds (getLocalBounds());
     cabinetPanel.setBounds (getCabinetStripArea());
 
     if (groups.empty())
+    {
+        backdrop.repaint();
         return;
+    }
 
     auto inner = getFaceplateArea().reduced (26, 0);
     inner.removeFromTop (40);   // group captions
@@ -364,6 +432,30 @@ void AmpPanel::resized()
 
         x += w + gap;
     }
+
+    // Where the ornaments go: around each knob's scale, switch and selector.
+    ornamentSpots.clear();
+    for (const auto& grp : groups)
+        for (auto* c : grp.controls)
+        {
+            if (auto* knob = dynamic_cast<AmpKnob*> (c))
+            {
+                const auto layout = knob->slider.getLookAndFeel().getSliderLayout (knob->slider);
+                const auto dial = getLocalArea (&knob->slider, layout.sliderBounds).toFloat().reduced (2.0f);
+                const float radius = AmpLookAndFeel::dialRadius (dial, theme) + 1.0f;
+                ornamentSpots.push_back ({ juce::Rectangle<float> (radius * 2.0f, radius * 2.0f).withCentre (dial.getCentre()), true });
+            }
+            else if (auto* toggle = dynamic_cast<AmpSwitch*> (c))
+            {
+                ornamentSpots.push_back ({ getLocalArea (&toggle->button, toggle->button.getLocalBounds()).toFloat(), false });
+            }
+            else if (auto* choice = dynamic_cast<AmpChoice*> (c))
+            {
+                ornamentSpots.push_back ({ getLocalArea (&choice->box, choice->box.getLocalBounds()).toFloat(), false });
+            }
+        }
+
+    backdrop.repaint();
 }
 
 //==============================================================================

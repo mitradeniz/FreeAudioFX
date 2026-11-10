@@ -1,5 +1,7 @@
 #include "AmpLookAndFeel.h"
 
+#include "OapArt.h"
+
 namespace oap::ui
 {
 
@@ -21,6 +23,9 @@ AmpTheme AmpTheme::drive()
     t.knobPointer  = Colour (0xfff6f6f6);
     t.headerText   = Colour (0xfff2f2f2);
     t.readout      = Colour (0xff0b0b0c);
+    t.art          = "drive";
+    t.ornament     = Ornament::thorns;
+    t.plateOpacity = 0.78f;
     return t;
 }
 
@@ -39,6 +44,9 @@ AmpTheme AmpTheme::clean()
     t.knobPointer  = Colour (0xfff2f2f2);
     t.headerText   = Colour (0xfff1eadc);
     t.readout      = Colour (0xff1c1916);
+    t.art          = "clean";
+    t.ornament     = Ornament::sparkles;
+    t.plateOpacity = 0.80f;
     return t;
 }
 
@@ -72,7 +80,7 @@ AmpTheme AmpTheme::custom (Colour background, Colour plateTop, Colour plateBotto
     t.panelBottom  = plateBottom;
     t.panelEdge    = plateBottom.darker (0.8f);
     t.panelText    = darkText ? Colour (0xff201e1b) : Colour (0xffeeeeec);
-    t.panelTextDim = darkText ? Colour (0xff6a655c) : Colour (0xff8f9298);
+    t.panelTextDim = darkText ? Colour (0xff4c473f) : Colour (0xff8f9298);
     t.accent       = accent;
     t.knobBody     = darkText ? Colour (0xff151515) : Colour (0xff17171a);
     t.knobSkirt    = darkText ? Colour (0xffc3c7cc) : Colour (0xff5f636b);
@@ -147,13 +155,15 @@ void AmpLookAndFeel::paintCovering (juce::Graphics& g, juce::Rectangle<int> area
 
 void AmpLookAndFeel::paintFaceplate (juce::Graphics& g, juce::Rectangle<float> area, const AmpTheme& t)
 {
+    const float alpha = juce::jlimit (0.0f, 1.0f, t.plateOpacity);
+
     // drop shadow
     juce::Path outline;
     outline.addRoundedRectangle (area, 7.0f);
-    juce::DropShadow (juce::Colours::black.withAlpha (0.6f), 18, { 0, 6 }).drawForPath (g, outline);
+    juce::DropShadow (juce::Colours::black.withAlpha (0.6f * alpha), 18, { 0, 6 }).drawForPath (g, outline);
 
-    g.setGradientFill (juce::ColourGradient (t.panelTop, area.getX(), area.getY(),
-                                             t.panelBottom, area.getX(), area.getBottom(), false));
+    g.setGradientFill (juce::ColourGradient (t.panelTop.withMultipliedAlpha (alpha), area.getX(), area.getY(),
+                                             t.panelBottom.withMultipliedAlpha (alpha), area.getX(), area.getBottom(), false));
     g.fillPath (outline);
 
     // brushed-metal streaks
@@ -210,11 +220,403 @@ void AmpLookAndFeel::paintGroupCaption (juce::Graphics& g, juce::Rectangle<float
 }
 
 //==============================================================================
+std::unique_ptr<juce::Drawable> AmpLookAndFeel::loadArt (const juce::String& name)
+{
+    if (name.isEmpty())
+        return nullptr;
+
+    int size = 0;
+    const auto resource = (name + "_svg").replaceCharacter ('-', '_');
+    if (const char* data = OapArt::getNamedResource (resource.toRawUTF8(), size))
+        if (auto drawable = juce::Drawable::createFromImageData (data, (size_t) size))
+            return drawable;
+
+    jassertfalse; // missing or broken artwork
+    return nullptr;
+}
+
+namespace
+{
+    using juce::Point;
+    using juce::Path;
+    using juce::PathStrokeType;
+
+    Point<float> polar (Point<float> c, float r, float angle) // angle 0 = up, clockwise
+    {
+        return { c.x + r * std::sin (angle), c.y - r * std::cos (angle) };
+    }
+
+    void strokeCircle (juce::Graphics& g, Point<float> c, float r, float width)
+    {
+        g.drawEllipse (c.x - r, c.y - r, r * 2.0f, r * 2.0f, width);
+    }
+
+    Path starPolygon (Point<float> c, int points, float outer, float inner, float rotation)
+    {
+        Path p;
+        for (int i = 0; i < points * 2; ++i)
+        {
+            const float a = rotation + (float) i * juce::MathConstants<float>::pi / (float) points;
+            const auto pt = polar (c, (i % 2 == 0) ? outer : inner, a);
+            if (i == 0) p.startNewSubPath (pt); else p.lineTo (pt);
+        }
+        p.closeSubPath();
+        return p;
+    }
+
+    Path bolt (Point<float> c, float h, bool mirrored)
+    {
+        const float s = mirrored ? -1.0f : 1.0f, w = h * 0.45f;
+        Path p;
+        p.startNewSubPath (c.x + s * 0.15f * w, c.y - 0.5f * h);
+        p.lineTo (c.x - s * 0.45f * w, c.y + 0.08f * h);
+        p.lineTo (c.x + s * 0.02f * w, c.y + 0.05f * h);
+        p.lineTo (c.x - s * 0.20f * w, c.y + 0.5f * h);
+        p.lineTo (c.x + s * 0.50f * w, c.y - 0.12f * h);
+        p.lineTo (c.x + s * 0.05f * w, c.y - 0.08f * h);
+        p.lineTo (c.x + s * 0.35f * w, c.y - 0.5f * h);
+        p.closeSubPath();
+        return p;
+    }
+
+    void petal (juce::Graphics& g, Point<float> c, float r, float angle, float len, juce::Colour colour)
+    {
+        Path p;
+        p.addEllipse (-len * 0.32f, -len * 0.5f, len * 0.64f, len);
+        p.applyTransform (juce::AffineTransform::rotation (angle).translated (polar (c, r, angle)));
+        g.setColour (colour);
+        g.fillPath (p);
+        g.setColour (colour.darker (0.4f).withAlpha (0.8f));
+        g.strokePath (p, PathStrokeType (0.6f));
+    }
+
+    void paintRoundOrnament (juce::Graphics& g, Point<float> c, float r, const oap::ui::AmpTheme& t)
+    {
+        // r is just outside the knob's scale; every style stays within r + 7.
+        using oap::ui::Ornament;
+        const auto a = t.accent;
+        const auto ink = t.panelText;
+        const float twoPi = juce::MathConstants<float>::twoPi;
+
+        switch (t.ornament)
+        {
+            case Ornament::none:
+                break;
+
+            case Ornament::halo:
+            {
+                const float outer = r + 7.0f;
+                juce::ColourGradient glow (a.withAlpha (0.0f), c.x, c.y, a.withAlpha (0.0f), c.x + outer, c.y, true);
+                glow.addColour ((r - 7.0f) / outer, a.withAlpha (0.0f));
+                glow.addColour (r / outer, a.withAlpha (0.45f));
+                g.setGradientFill (glow);
+                g.fillEllipse (c.x - outer, c.y - outer, outer * 2.0f, outer * 2.0f);
+                g.setColour (a.withAlpha (0.6f));
+                strokeCircle (g, c, r + 0.5f, 0.8f);
+                break;
+            }
+
+            case Ornament::neon:
+                g.setColour (a.withAlpha (0.18f)); strokeCircle (g, c, r + 3.0f, 7.0f);
+                g.setColour (a.withAlpha (0.40f)); strokeCircle (g, c, r + 3.0f, 3.5f);
+                g.setColour (a.brighter (0.7f));   strokeCircle (g, c, r + 3.0f, 1.3f);
+                break;
+
+            case Ornament::pixel:
+            {
+                const float cell = 3.0f;
+                juce::Array<juce::Point<int>> done;
+                for (int i = 0; i < 220; ++i)
+                {
+                    const auto pt = polar (c, r + 3.0f, twoPi * (float) i / 220.0f);
+                    const juce::Point<int> cellPos ((int) std::floor (pt.x / cell), (int) std::floor (pt.y / cell));
+                    if (done.addIfNotAlreadyThere (cellPos))
+                    {
+                        g.setColour ((cellPos.x + cellPos.y) % 2 == 0 ? a : a.withAlpha (0.55f));
+                        g.fillRect ((float) cellPos.x * cell, (float) cellPos.y * cell, cell - 0.4f, cell - 0.4f);
+                    }
+                }
+                for (int i = 0; i < 8; ++i) // little "power-up" pixels on the diagonals
+                {
+                    const auto pt = polar (c, r + 6.0f, twoPi * ((float) i + 0.5f) / 8.0f);
+                    g.setColour (juce::Colours::white.withAlpha (0.85f));
+                    g.fillRect (std::floor (pt.x) - 1.5f, std::floor (pt.y) - 1.5f, 3.0f, 3.0f);
+                }
+                break;
+            }
+
+            case Ornament::thorns:
+            {
+                Path spikes;
+                const int n = 20;
+                for (int i = 0; i < n; ++i)
+                {
+                    const float ang = twoPi * (float) i / (float) n;
+                    const float len = (i % 2 == 0) ? 7.0f : 4.0f;
+                    spikes.addTriangle (polar (c, r, ang - 0.08f), polar (c, r + len, ang), polar (c, r, ang + 0.08f));
+                }
+                g.setColour (a.withAlpha (0.85f));
+                g.fillPath (spikes);
+                strokeCircle (g, c, r + 0.5f, 1.4f);
+                break;
+            }
+
+            case Ornament::ornate:
+            {
+                g.setColour (a.withAlpha (0.85f));
+                strokeCircle (g, c, r + 0.5f, 1.1f);
+                g.setColour (a.withAlpha (0.55f));
+                strokeCircle (g, c, r + 6.5f, 0.9f);
+                for (int i = 0; i < 24; ++i)
+                {
+                    const auto p = polar (c, r + 3.5f, twoPi * (float) i / 24.0f);
+                    const bool big = i % 3 == 0;
+                    const float br = big ? 1.7f : 0.9f;
+                    g.setColour (big ? a : a.withAlpha (0.7f));
+                    g.fillEllipse (p.x - br, p.y - br, br * 2.0f, br * 2.0f);
+                }
+                break;
+            }
+
+            case Ornament::stitch:
+            {
+                Path circle, dashed;
+                circle.addEllipse (c.x - r - 3.0f, c.y - r - 3.0f, (r + 3.0f) * 2.0f, (r + 3.0f) * 2.0f);
+                const float dashes[] = { 4.0f, 3.5f };
+                PathStrokeType (1.5f, PathStrokeType::curved, PathStrokeType::rounded).createDashedStroke (dashed, circle, dashes, 2);
+                g.setColour (ink.withAlpha (0.65f));
+                g.fillPath (dashed);
+                g.setColour (a.withAlpha (0.5f));
+                strokeCircle (g, c, r + 6.5f, 1.0f);
+                strokeCircle (g, c, r - 0.5f, 1.0f);
+                break;
+            }
+
+            case Ornament::petals:
+            {
+                const juce::Colour pink (0xfff6b3c6);
+                for (int i = 0; i < 5; ++i)
+                    petal (g, c, r + 3.5f, twoPi * (float) i / 5.0f + 0.31f, 7.5f, pink.withAlpha (0.95f));
+                for (int i = 0; i < 5; ++i)
+                {
+                    const auto p = polar (c, r + 2.5f, twoPi * (float) i / 5.0f + 0.31f + 0.63f);
+                    g.setColour (a.withAlpha (0.8f));
+                    g.fillEllipse (p.x - 1.3f, p.y - 1.3f, 2.6f, 2.6f);
+                }
+                break;
+            }
+
+            case Ornament::star:
+            {
+                const float s = r + 7.0f;
+                Path star;
+                for (float rot : { 0.0f, juce::MathConstants<float>::pi * 0.25f })
+                {
+                    Path sq;
+                    sq.addRectangle (-s * 0.7071f, -s * 0.7071f, s * 1.4142f, s * 1.4142f);
+                    sq.applyTransform (juce::AffineTransform::rotation (rot).translated (c));
+                    star.addPath (sq);
+                }
+                g.setColour (a.withAlpha (0.16f));
+                g.fillPath (star);
+                g.setColour (a.withAlpha (0.8f));
+                g.strokePath (star, PathStrokeType (1.1f));
+                strokeCircle (g, c, r + 0.5f, 0.9f);
+                break;
+            }
+
+            case Ornament::rays:
+            {
+                g.setColour (a.withAlpha (0.9f));
+                for (int i = 0; i < 32; ++i)
+                {
+                    const float ang = twoPi * (float) i / 32.0f;
+                    const float len = (i % 2 == 0) ? 6.5f : 3.5f;
+                    g.drawLine (juce::Line<float> (polar (c, r + 0.5f, ang), polar (c, r + 0.5f + len, ang)), i % 2 == 0 ? 1.5f : 1.0f);
+                }
+                strokeCircle (g, c, r, 1.3f);
+                break;
+            }
+
+            case Ornament::bolts:
+            {
+                g.setColour (a.withAlpha (0.25f)); strokeCircle (g, c, r + 1.5f, 5.0f);
+                g.setColour (a);                   strokeCircle (g, c, r + 1.5f, 1.2f);
+                for (float ang : { -2.2f, 2.2f, -1.05f, 1.05f })
+                    g.fillPath (bolt (polar (c, r + 3.5f, ang), 10.0f, ang > 0.0f));
+                break;
+            }
+
+            case Ornament::pentagram:
+            {
+                const float outer = r + 4.5f;
+                Path star;
+                for (int i = 0; i < 5; ++i)
+                {
+                    // inverted: first point at the bottom
+                    const auto p = polar (c, outer, juce::MathConstants<float>::pi + twoPi * (float) (i * 2 % 5) / 5.0f);
+                    if (i == 0) star.startNewSubPath (p); else star.lineTo (p);
+                }
+                star.closeSubPath();
+                g.setColour (a.withAlpha (0.6f));
+                g.strokePath (star, PathStrokeType (1.2f));
+                g.setColour (a.withAlpha (0.85f));
+                strokeCircle (g, c, outer, 1.3f);
+                g.setColour (a.withAlpha (0.4f));
+                strokeCircle (g, c, outer + 2.5f, 0.8f);
+                for (int i = 0; i < 5; ++i)
+                {
+                    const auto p = polar (c, outer + 2.5f, juce::MathConstants<float>::pi + twoPi * (float) i / 5.0f);
+                    g.setColour (a);
+                    g.fillEllipse (p.x - 1.6f, p.y - 1.6f, 3.2f, 3.2f);
+                }
+                break;
+            }
+
+            case Ornament::orbit:
+            {
+                const float rx = r + 6.0f;
+                Path orbitPath;
+                orbitPath.addEllipse (-rx, -rx * 0.38f, rx * 2.0f, rx * 0.76f);
+                orbitPath.applyTransform (juce::AffineTransform::rotation (-0.35f).translated (c));
+                g.setColour (a.withAlpha (0.75f));
+                g.strokePath (orbitPath, PathStrokeType (1.3f));
+                g.setColour (a.withAlpha (0.35f));
+                strokeCircle (g, c, r + 0.5f, 1.0f);
+                const auto moon = juce::Point<float> (-rx * 0.82f, -rx * 0.38f * 0.57f)
+                                      .transformedBy (juce::AffineTransform::rotation (-0.35f).translated (c));
+                g.setColour (a.brighter (0.5f));
+                g.fillEllipse (moon.x - 3.0f, moon.y - 3.0f, 6.0f, 6.0f);
+                break;
+            }
+
+            case Ornament::sparkles:
+            {
+                for (int i = 0; i < 16; ++i)
+                {
+                    const auto p = polar (c, r + 3.0f, twoPi * (float) i / 16.0f);
+                    if (i % 4 == 0)
+                    {
+                        g.setColour (juce::Colours::white.withAlpha (0.95f));
+                        g.fillPath (starPolygon (p, 4, 4.5f, 1.1f, 0.0f));
+                    }
+                    else
+                    {
+                        g.setColour ((i % 2 == 0 ? a : juce::Colour (0xffd8f3ff)).withAlpha (0.85f));
+                        g.fillEllipse (p.x - 1.4f, p.y - 1.4f, 2.8f, 2.8f);
+                    }
+                }
+                break;
+            }
+
+            case Ornament::rose:
+            {
+                static const juce::Colour glass[] = { juce::Colour (0xffc0283b), juce::Colour (0xff2a55c8), juce::Colour (0xffe0a82e),
+                                                      juce::Colour (0xff2f8f5a), juce::Colour (0xff7b3fb5), juce::Colour (0xff2a55c8) };
+                const int n = 18;
+                const float outer = r + 6.5f;
+                for (int i = 0; i < n; ++i)
+                {
+                    const float a0 = twoPi * (float) i / (float) n, a1 = twoPi * (float) (i + 1) / (float) n;
+                    Path seg;
+                    seg.addPieSegment (c.x - outer, c.y - outer, outer * 2.0f, outer * 2.0f, a0, a1, (r + 0.5f) / outer);
+                    g.setColour (glass[i % 6].withAlpha (0.85f));
+                    g.fillPath (seg);
+                }
+                g.setColour (juce::Colour (0xff1c1a20));
+                for (int i = 0; i < n; ++i)
+                {
+                    const float ang = twoPi * (float) i / (float) n;
+                    g.drawLine (juce::Line<float> (polar (c, r + 0.5f, ang), polar (c, outer, ang)), 1.1f);
+                }
+                strokeCircle (g, c, r + 0.5f, 1.3f);
+                strokeCircle (g, c, outer, 1.5f);
+                break;
+            }
+        }
+    }
+
+    void paintFrameOrnament (juce::Graphics& g, juce::Rectangle<float> area, const oap::ui::AmpTheme& t)
+    {
+        using oap::ui::Ornament;
+        const auto a = t.accent;
+        const auto r = area.expanded (4.0f, 4.0f);
+
+        if (t.ornament == Ornament::none)
+            return;
+
+        if (t.ornament == Ornament::halo || t.ornament == Ornament::neon)
+        {
+            g.setColour (a.withAlpha (0.15f)); g.drawRoundedRectangle (r, 7.0f, 6.0f);
+            g.setColour (a.withAlpha (0.35f)); g.drawRoundedRectangle (r, 7.0f, 3.0f);
+            g.setColour (t.ornament == Ornament::neon ? a.brighter (0.7f) : a.withAlpha (0.6f));
+            g.drawRoundedRectangle (r, 7.0f, 1.2f);
+            return;
+        }
+
+        if (t.ornament == Ornament::pixel)
+        {
+            g.setColour (a);
+            for (float x = r.getX(); x < r.getRight(); x += 5.0f)
+            {
+                g.fillRect (x, r.getY(), 3.0f, 3.0f);
+                g.fillRect (x, r.getBottom() - 3.0f, 3.0f, 3.0f);
+            }
+            for (float y = r.getY() + 5.0f; y < r.getBottom() - 3.0f; y += 5.0f)
+            {
+                g.fillRect (r.getX(), y, 3.0f, 3.0f);
+                g.fillRect (r.getRight() - 3.0f, y, 3.0f, 3.0f);
+            }
+            return;
+        }
+
+        if (t.ornament == Ornament::stitch)
+        {
+            Path p, dashed;
+            p.addRoundedRectangle (r, 6.0f);
+            const float dashes[] = { 4.0f, 3.5f };
+            PathStrokeType (1.5f, PathStrokeType::curved, PathStrokeType::rounded).createDashedStroke (dashed, p, dashes, 2);
+            g.setColour (t.panelText.withAlpha (0.6f));
+            g.fillPath (dashed);
+            return;
+        }
+
+        // every other style: a framed plate with corner jewels in the theme's motif
+        g.setColour (a.withAlpha (0.8f));
+        g.drawRoundedRectangle (r, 5.0f, 1.2f);
+        g.setColour (a.withAlpha (0.35f));
+        g.drawRoundedRectangle (r.expanded (2.5f), 7.0f, 0.8f);
+        for (auto corner : { r.getTopLeft(), r.getTopRight(), r.getBottomLeft(), r.getBottomRight() })
+        {
+            g.setColour (a);
+            g.fillPath (starPolygon (corner, 4, 4.0f, 1.3f, 0.0f));
+        }
+    }
+}
+
+float AmpLookAndFeel::dialRadius (juce::Rectangle<float> bounds, const AmpTheme& t)
+{
+    const float r = juce::jmin (bounds.getWidth(), bounds.getHeight()) * 0.5f;
+    return t.ornament == Ornament::none ? r : juce::jmin (r, 34.0f);
+}
+
+void AmpLookAndFeel::paintOrnament (juce::Graphics& g, juce::Rectangle<float> area, bool round, const AmpTheme& t)
+{
+    if (t.ornament == Ornament::none)
+        return;
+
+    if (round)
+        paintRoundOrnament (g, area.getCentre(), area.getWidth() * 0.5f, t);
+    else
+        paintFrameOrnament (g, area, t);
+}
+
+//==============================================================================
 void AmpLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int width, int height, float pos,
                                        float startAngle, float endAngle, juce::Slider& slider)
 {
     const auto bounds = juce::Rectangle<float> ((float) x, (float) y, (float) width, (float) height).reduced (2.0f);
-    const float outer = juce::jmin (bounds.getWidth(), bounds.getHeight()) * 0.5f;
+    const float outer = dialRadius (bounds, theme);
     const auto c = bounds.getCentre();
     const float angle = startAngle + pos * (endAngle - startAngle);
     const bool active = slider.isMouseOverOrDragging() && slider.isEnabled();
@@ -377,11 +779,15 @@ void AmpLookAndFeel::drawComboBox (juce::Graphics& g, int width, int height, boo
     g.fillPath (arrow);
 }
 
-juce::Font AmpLookAndFeel::getComboBoxFont (juce::ComboBox&) { return font (14.0f, true); }
+juce::Font AmpLookAndFeel::getComboBoxFont (juce::ComboBox& box)
+{
+    return font (box.getWidth() < 100 ? 12.5f : 14.0f, true); // narrow selectors on the amp faceplates
+}
 
 void AmpLookAndFeel::positionComboBoxText (juce::ComboBox& box, juce::Label& label)
 {
-    label.setBounds (8, 1, box.getWidth() - 30, box.getHeight() - 2);
+    const int arrow = box.getWidth() < 100 ? 22 : 30;
+    label.setBounds (box.getWidth() < 100 ? 5 : 8, 1, box.getWidth() - arrow - (box.getWidth() < 100 ? 2 : 0), box.getHeight() - 2);
     label.setFont (getComboBoxFont (box));
 }
 
