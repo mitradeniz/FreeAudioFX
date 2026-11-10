@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/formats-VST3%20%7C%20AU%20%7C%20Standalone-19b3a3?style=flat-square" alt="Formats: VST3, AU, Standalone">
   <img src="https://img.shields.io/badge/macOS%20%7C%20Windows%20%7C%20Linux-555?style=flat-square" alt="Platforms: macOS, Windows, Linux">
   <img src="https://img.shields.io/badge/built%20with-JUCE%209%20%C2%B7%20C%2B%2B17-555?style=flat-square" alt="Built with JUCE 9 and C++17">
-  <img src="https://img.shields.io/badge/plugins-44-ff5a1f?style=flat-square" alt="44 plugins">
+  <img src="https://img.shields.io/badge/plugins-45-ff5a1f?style=flat-square" alt="45 plugins">
   <img src="https://img.shields.io/badge/price-free-2ea44f?style=flat-square" alt="Price: free">
 </p>
 
@@ -15,7 +15,7 @@
   <b>Plug in your guitar, open your DAW, turn some knobs.</b><br>
   Open Audio Plugins is a growing collection of free, open audio plugins: practical tools with clear interfaces,<br>
   reliable performance and no unnecessary restrictions. 🎸<br><br>
-  <b>2 amps · 21 effect amps · 20 pedals · 1 Pedalboard</b>, every amp with its own artwork<br>
+  <b>2 amps · 21 effect amps · 20 pedals · 1 Pedalboard · 1 Looper</b>, every amp with its own artwork<br>
   VST3 · Audio Unit · Standalone, on macOS, Windows and Linux
 </p>
 
@@ -44,8 +44,9 @@
 | 🌈 | **[Effect amps](#effect-amps)**: an amp and its genre's effects in one plugin | Dream, Dub, Space Delay, Black Metal, Warm Rock, Surf, Shoegaze, Arena, Stereo Jazz, Doom, Crunch, 8-Bit, Knight, Heavy Metal, Synthwave, Western, Funk, Pharaoh, Sakura, Persian, Choir |
 | 🦶 | **[Pedals](#pedals)**: 12 everyday + 8 advanced stompboxes | Compressor, Boost, Overdrive, Distortion, Fuzz, Chorus, Flanger, Phaser, Tremolo, Delay, Reverb, Wah · Shimmer, Tape Echo, Pitch Shifter, Envelope Filter, Rotary, Freeze, Guitar Synth, Lo-Fi |
 | 🧩 | **[Pedalboard](#pedalboard)**: any eight pedals in one plugin | Pedalboard |
+| 🔁 | **[Looper](#looper)**: record a phrase, play over it, layer after layer | Looper |
 
-Every plugin is separate, so you can mix them freely on a track: pedals into an amp, an effect amp on its own, the Pedalboard into the Drive Amp, or OAP pedals in front of any other amp sim.
+Every plugin is separate, so you can mix them freely on a track: pedals into an amp, an effect amp on its own, the Pedalboard into the Drive Amp, the Looper after any of them, or OAP pedals in front of any other amp sim.
 
 <a id="amps"></a>
 ### 🔥 OAP Drive Amp: the high-gain monster
@@ -207,6 +208,23 @@ Every pedal has a click-free footswitch that your DAW's bypass button controls t
 
 Pick any pedal for each of eight slots, reorder them with **<** and **>**, switch them on and off, and save the whole board with your project. Also a standalone app for practising. 📖 [Pedalboard manual](docs/plugins/Pedalboard.md)
 
+<a id="looper"></a>
+### 🔁 Looper: record a phrase, play over it
+
+<p align="center">
+  <img src="docs/assets/looper-overdub.png" width="100%" alt="OAP Looper overdubbing a second layer onto a two-bar loop">
+</p>
+
+Click the big button to record, click again and the phrase repeats, click again to play on top of it. Made for the mouse, with everything a looper needs for real playing:
+
+- **Overdub, undo and redo**, double-click to stop, hold to undo: the big button works like a looper's footswitch.
+- **In time with your project:** start and stop on the bar line while your DAW plays, record exact lengths (*2 beats*, *4 bars*…) that close by themselves, follow tempo changes, auto-start on your first note, and a click.
+- **Your loop is saved with the project**, and as a WAV file whenever you like. Drop an audio file on the window to loop it.
+- **Half speed, double speed, reverse**, overdub feedback for loops that evolve, three ways to stop, and ×2 to make room for a longer layer.
+- Switch parameters for **foot controllers**. Also a standalone app for practising.
+
+📖 [Looper manual](docs/plugins/Looper.md)
+
 <details>
 <summary><b>Which plugin should I pick?</b></summary>
 <br>
@@ -233,6 +251,7 @@ Pick any pedal for each of eight slots, reorder them with **<** and **>**, switc
 | Middle-Eastern melodies | 🏺 Pharaoh Amp / 🕌 Persian Amp | single-string slides / tremolo picking |
 | Worship, ambient swells | ⛪ Choir Amp | **Choir** 8, volume swells |
 | Your own rig | 🧩 Pedalboard → any amp | the default board |
+| Practising solos over your own chords, building songs in layers | 🔁 Looper, after the amp | click the big button, play, click again |
 
 </details>
 
@@ -245,7 +264,7 @@ Pick any pedal for each of eight slots, reorder them with **<** and **>**, switc
 | --- | --- | --- | --- |
 | **VST3** | ✓ | ✓ | ✓ |
 | **Audio Unit** | ✓ | | |
-| **Standalone** (amps, Pedalboard) | ✓ | ✓ | ✓ |
+| **Standalone** (amps, Pedalboard, Looper) | ✓ | ✓ | ✓ |
 
 Any DAW that loads VST3 or Audio Units should work, including:
 
@@ -410,7 +429,7 @@ cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
 ✅ It worked if the last line says **`Build files have been written to: …`**
 
-Now build all 44 plugins. Grab a coffee ☕, the first build takes about 5-20 minutes:
+Now build all 45 plugins. Grab a coffee ☕, the first build takes about 5-20 minutes:
 
 ```bash
 cmake --build build
@@ -428,18 +447,19 @@ The build copies the plugins into your Mac's plug-in folders automatically. Chec
 ls ~/Library/Audio/Plug-Ins/VST3 ~/Library/Audio/Plug-Ins/Components
 ```
 
-You should see 44 `OAP … .vst3` plugins and 44 `OAP … .component` plugins, from `OAP 8-Bit Amp` to `OAP Wah`. 🎉
+You should see 45 `OAP … .vst3` plugins and 45 `OAP … .component` plugins, from `OAP 8-Bit Amp` to `OAP Wah`. 🎉
 
 <details>
 <summary>🎧 <b>Optional: try an amp without a DAW first</b></summary>
 <br>
 
-Every amp and the Pedalboard are also built as standalone apps:
+Every amp, the Pedalboard and the Looper are also built as standalone apps:
 
 ```bash
 open "build/plugins/DriveAmp/DriveAmp_artefacts/Release/Standalone/OAP Drive Amp.app"
 open "build/plugins/effectamps/DreamAmp_artefacts/Release/Standalone/OAP Dream Amp.app"
 open "build/plugins/Pedalboard/Pedalboard_artefacts/Release/Standalone/OAP Pedalboard.app"
+open "build/plugins/Looper/Looper_artefacts/Release/Standalone/OAP Looper.app"
 ```
 
 Click **Options → Audio/MIDI Settings**, pick your audio interface, then unmute the input. **Use headphones** to avoid feedback.
@@ -618,6 +638,22 @@ Raise the **Buffer Size** (256), and close other heavy apps. Make sure you built
 </details>
 
 <details>
+<summary><b>The Looper waits instead of recording, or stops recording by itself</b></summary>
+<br>
+
+That is **Sync** at work. While your DAW is playing (or the Looper's **Click** is on), recording starts and ends on the next bar line, so the big button blinks until then: set **Quantize** to *Off* to act at once, or switch **Sync** off for a plain looper. If the recording ends by itself, **Length** is set to a fixed number of beats or bars: choose *Free*. And with **Auto Start** on, the Looper waits for your first note. 📖 [In time with your project](docs/plugins/Looper.md#in-time-with-your-project)
+
+</details>
+
+<details>
+<summary><b>The Looper records silence</b></summary>
+<br>
+
+Watch the **IN** meter at the bottom of the Looper's display while you play. If it doesn't move, no signal reaches the Looper: check the track's input and monitoring (see *I don't hear anything* above), and that the Looper sits **after** the amp on the same track.
+
+</details>
+
+<details>
 <summary><b>The build failed</b></summary>
 <br>
 
@@ -686,7 +722,8 @@ flowchart LR
 - **Mono amps, like real ones.** Stereo input is summed and the amp drives both speakers; reverbs, ping-pong delays and stereo choruses then spread it out.
 - **Low latency:** 6 samples for the amps, up to about 1 ms for the oversampled drive pedals, always reported to your DAW for compensation.
 - **Light on the CPU** (one core at 48 kHz, measured on an x86 machine): amps 1.5-5 %, effect amps 2-8 %, pedals 0.05-3.5 %.
-- **Tested:** about 1,000 automated DSP checks (stability at 44.1-192 kHz with random automation, silence, aliasing, levels, impulse responses, every effect amp knob) and every plugin passes [pluginval](https://github.com/Tracktion/pluginval) at its strictest level.
+- **A looper that never makes the audio wait:** the loop's memory is prepared ahead of the recording by another thread, undo copies only what an overdub touches, and saving, loading and resizing the loop talk to the audio thread without locks.
+- **Tested:** about 1,500 automated checks. DSP: stability at 44.1-192 kHz with random automation, silence, aliasing, levels, impulse responses, every effect amp knob. Looper: sample-exact playback, undo, tempo sync, and other threads working on the loop while audio runs (also under thread and memory sanitizers). Plugin layer: the Looper's session state, audio files, host tempo and mapped switches. And every plugin passes [pluginval](https://github.com/Tracktion/pluginval) at its strictest level.
 
 Want to dig deeper? 📚 [Plugin manuals](docs/plugins/) · [Using the plugins in your DAW](docs/DAWS.md) · [Building on every platform](docs/BUILDING.md) · [Developer guide](docs/DEVELOPMENT.md)
 
@@ -698,14 +735,16 @@ FreeAudioFX/
 │   ├── DriveAmp/ CleanAmp/   # the two amps
 │   ├── effectamps/           # 21 effect amps, one shared source file
 │   ├── pedals/               # 20 pedals, one shared source file
-│   └── Pedalboard/
+│   ├── Pedalboard/
+│   └── Looper/
 ├── shared/
 │   ├── dsp/                  # amp building blocks: tubes, tone stacks, cabinets, gate
 │   ├── fx/                   # the effects library behind every pedal
 │   ├── amps/                 # effect amp models and engine
+│   ├── looper/               # the looper engine
 │   ├── art/                  # the artwork of every amp (SVG)
 │   ├── plugin/ ui/           # plugin wrappers, knobs, editors
-├── tests/                    # automated DSP tests
+├── tests/                    # automated DSP and plugin tests
 ├── tools/                    # artwork generator and editor snapshot renderer
 ├── docs/                     # manuals, DAW guide, build guide, developer guide, artwork
 ├── cmake/                    # shared CMake helpers
@@ -728,6 +767,7 @@ Python is used only for side jobs such as generating the README artwork, never i
 - [x] 20 pedals (12 everyday, 8 advanced) and a Pedalboard.
 - [x] 21 effect amps.
 - [x] Artwork for every amp, with ornaments around the controls.
+- [x] Looper: overdub with undo, tempo sync, and loops saved with the project.
 - [ ] Hands-on testing in Ableton Live (incl. Lite), Logic Pro, GarageBand, REAPER, FL Studio, Cubase, Studio One and Bitwig on macOS and Windows, and REAPER/Bitwig/Ardour on Linux.
 - [ ] Presets and an input level meter.
 - [ ] Pro Tools (AAX) and CLAP builds.

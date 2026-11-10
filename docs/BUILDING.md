@@ -5,8 +5,8 @@ the first time you configure, so the first configure needs an internet
 connection and takes a minute or two.
 
 One build produces every plugin in the collection: the 2 amps, 21 effect amps,
-20 pedals and the Pedalboard, as VST3 everywhere, Audio Units on macOS, and standalone apps for
-the amps and the Pedalboard. Once built, see [DAWS.md](DAWS.md) for loading
+20 pedals, the Pedalboard and the Looper, as VST3 everywhere, Audio Units on
+macOS, and standalone apps for the amps, the Pedalboard and the Looper. Once built, see [DAWS.md](DAWS.md) for loading
 them in your DAW.
 
 | Platform | Formats | Compiler |
@@ -66,6 +66,7 @@ cmake --build build --target OverdrivePedal_All   # every format of one plugin
 | Effect amps | `DreamAmp`, `DubAmp`, `SpaceDelayAmp`, `BlackMetalAmp`, `WarmRockAmp`, `SurfAmp`, `ShoegazeAmp`, `ArenaAmp`, `StereoJazzAmp`, `DoomAmp`, `CrunchAmp`, `EightBitAmp`, `KnightAmp`, `HeavyMetalAmp`, `SynthwaveAmp`, `WesternAmp`, `FunkAmp`, `PharaohAmp`, `SakuraAmp`, `PersianAmp`, `ChoirAmp` |
 | Pedals | `CompressorPedal`, `BoostPedal`, `OverdrivePedal`, `DistortionPedal`, `FuzzPedal`, `ChorusPedal`, `FlangerPedal`, `PhaserPedal`, `TremoloPedal`, `DelayPedal`, `ReverbPedal`, `WahPedal`, `ShimmerPedal`, `TapeEchoPedal`, `PitchPedal`, `EnvFilterPedal`, `RotaryPedal`, `FreezePedal`, `SynthPedal`, `LoFiPedal` |
 | Pedalboard | `Pedalboard` |
+| Looper | `Looper` |
 
 ### 3. Where the plugins end up
 
@@ -81,11 +82,12 @@ The build products themselves are under `build/plugins/`:
 
 | Plugins | Folder |
 | --- | --- |
-| Drive Amp, Clean Amp, Pedalboard | `build/plugins/<Target>/<Target>_artefacts/Release/` |
+| Drive Amp, Clean Amp, Pedalboard, Looper | `build/plugins/<Target>/<Target>_artefacts/Release/` |
 | Effect amps | `build/plugins/effectamps/<Target>_artefacts/Release/` |
 | Pedals | `build/plugins/pedals/<Target>_artefacts/Release/` |
 
-Each has `VST3/`, `AU/` and, for the amps and the Pedalboard, `Standalone/`.
+Each has `VST3/`, `AU/` and, for the amps, the Pedalboard and the Looper,
+`Standalone/`.
 The **Standalone** apps are handy for a quick test with your audio interface,
 without opening a DAW.
 
@@ -103,7 +105,7 @@ auval -v aufx Drva Oapl   # OAP Drive Amp
 for code in Drva Clna Drem Dubx Spdl Blkm Wrmr Surf Shgz Aren Stjz Doom \
             Crch Chip Kngt Hvym Snwv Wstn Funk Phrh Skra Prsn Chir \
             Comp Bost Ovdr Dist Fuzz Chor Flng Phsr Trem Dlay Revb Wahx \
-            Shim Tape Ptch Envf Rota Frez Synt Lofi Pdbd; do
+            Shim Tape Ptch Envf Rota Frez Synt Lofi Pdbd Loop; do
   auval -v aufx $code Oapl | tail -1
 done
 ```
@@ -179,22 +181,32 @@ Bitwig Studio and more, and how to set up a guitar track.
 | `OAP_SHARED_JUCE` | `ON` | Compile JUCE once for all plugins. Set to `OFF` to give every plugin its own copy (slower; the stock JUCE setup). |
 | `OAP_JUCE_PATH` | *(empty)* | Use a local JUCE checkout instead of downloading it. |
 
-## Running the DSP tests
+## Running the tests
 
 ```bash
-cmake --build build --target oap_dsp_tests
+cmake --build build --target oap_dsp_tests oap_plugin_tests
 ./build/tests/oap_dsp_tests_artefacts/Release/oap_dsp_tests
+./build/tests/oap_plugin_tests_artefacts/Release/oap_plugin_tests
 ```
 
-About a thousand checks run in a minute or so: every amp, effect amp and
-pedal at several sample rates and block sizes with random automation, decay to
-silence, output levels, aliasing, cabinets and impulse responses, gates, and
-CPU use. Add `--render demos` to also write example WAV files (a synthetic
-guitar played through the Drive and Clean amps) into a `demos/` folder. With
-CTest: `ctest --test-dir build`.
+`oap_dsp_tests` runs about 1,400 checks in a couple of minutes: every amp, effect
+amp and pedal at several sample rates and block sizes with random automation,
+decay to silence, output levels, aliasing, cabinets and impulse responses,
+gates and CPU use, and the looper engine (sample-exact playback, undo, tempo
+sync, other threads working on the loop while audio runs). Add
+`--render demos` to also write example WAV files (a synthetic guitar played
+through the Drive and Clean amps) into a `demos/` folder, or `--only looper`
+to run just the looper's tests.
 
-The `oap_snapshots` tool renders the editor of every pedal, effect amp and the
-Pedalboard to PNG files (used for the documentation images):
+`oap_plugin_tests` runs the Looper plugin the way a host does, audio on one
+thread and everything else on another: the loop saved with the session and
+restored, sample-rate changes, audio files, host tempo, switches mapped to
+parameters, and the editor. It takes a few seconds.
+
+With CTest: `ctest --test-dir build`.
+
+The `oap_snapshots` tool renders the editor of every pedal, effect amp, the
+Pedalboard and the Looper to PNG files (used for the documentation images):
 
 ```bash
 cmake --build build --target oap_snapshots

@@ -27,16 +27,20 @@ FreeAudioFX/
 │   │   ├── AmpModels.cpp       # the effect amps
 │   │   ├── EffectAmpEngine.*   # the signal path built from a model
 │   │   └── EffectAmp{Processor,Editor}.*  # generic plugin wrapper and faceplate
+│   ├── looper/                 # looper (plain C++17, no JUCE)
+│   │   ├── LooperEngine.*      # record, play, overdub, undo, tempo sync; lock-free towards other threads
+│   │   └── LoopUtils.h         # sample-rate conversion of a loop, waveform overview
 │   ├── art/                    # one SVG artwork per amp (generated, embedded into the plugins)
-│   ├── plugin/                 # AmpProcessorBase, PedalProcessor, PedalboardProcessor
-│   └── ui/                     # look-and-feel, knobs, switches, cab panel, pedal and board editors
+│   ├── plugin/                 # AmpProcessorBase, PedalProcessor, PedalboardProcessor, LooperProcessor
+│   └── ui/                     # look-and-feel, knobs, switches, cab panel, pedal, board and looper editors
 ├── plugins/
 │   ├── DriveAmp/Source/        # DriveAmpEngine (DSP), parameters, processor, editor
 │   ├── CleanAmp/Source/        # CleanAmpEngine (DSP), parameters, processor, editor
 │   ├── effectamps/             # 10 targets from one source file
 │   ├── pedals/                 # 20 targets from one source file
-│   └── Pedalboard/
-├── tests/                      # console test runner (amps, effects, effect amps)
+│   ├── Pedalboard/
+│   └── Looper/
+├── tests/                      # console test runners: DSP (amps, effects, effect amps, looper) and plugin layer
 ├── tools/
 │   ├── Snapshots.cpp           # renders editors to PNG for the docs
 │   └── art/make_amp_art.py     # draws the amp artwork (shared/art/*.svg)
@@ -44,9 +48,10 @@ FreeAudioFX/
 ```
 
 The DSP always lives in classes that know nothing about the plugin wrapper:
-the amp **engines** (`DriveAmpEngine`, `CleanAmpEngine`, `EffectAmpEngine`) and
-the **effects** in `shared/fx`. Processors only read parameters and call
-`process()`, and the tests drive the DSP directly.
+the amp **engines** (`DriveAmpEngine`, `CleanAmpEngine`, `EffectAmpEngine`),
+the **effects** in `shared/fx` and the **looper engine** in `shared/looper`.
+Processors only read parameters and call `process()`, and the tests drive the
+DSP directly.
 
 The pedals, the effect amps and the Pedalboard are **data-driven**: their
 parameters, editors and saved state are generated from an `EffectInfo` or an
@@ -129,6 +134,37 @@ artwork: `halo`, `neon`, `pixel`, `thorns`, `ornate`, `stitch`, `petals`,
 little smaller so neighbouring rings never overlap. Render every editor with
 `oap_snapshots` to check the result.
 
+## The Looper
+
+The Looper is the one plugin whose audio thread shares data with other
+threads all the time, so its parts are split strictly by thread:
+
+- **`looper::LooperEngine`** (plain C++17) is everything the audio thread
+  does: the state machine behind the switches (click, double-click, hold),
+  recording, the varispeed play and record heads, copy-on-write undo, the
+  tempo grid. Its audio-thread functions never allocate, lock or wait.
+  Other threads use `serviceMemory()` (hands over loop memory ahead of the
+  recording) and `copyLoop()` / `loadLoop()` / `doubleLength()` /
+  `halveLength()`, which ask the audio thread for a *hold* through a few
+  atomics: a read hold lets playback continue, an exclusive hold stops it,
+  and a hold is refused while something is being recorded. If no audio block
+  has started for a second, audio isn't running: the caller then locks the
+  audio thread out with a try-lock that the audio thread never waits on, and
+  does the work itself. Read the comments in `LooperEngine.h` before
+  changing any of this, and run the looper tests under ThreadSanitizer
+  afterwards (they build without JUCE:
+  `g++ -fsanitize=thread tests/LooperTests.cpp shared/looper/LooperEngine.cpp`
+  plus a three-line `main`).
+- **`LooperProcessor`** adds what a plugin needs: parameters, the host's
+  tempo, switch events from the editor (a FIFO) and from mapped parameters,
+  and a background thread that copies the loop whenever it has changed,
+  makes the waveform overview and compresses the copy (FLAC), so that
+  `getStateInformation()` can return the loop without waiting. The state is
+  a small binary container: the parameter XML, then the audio.
+- **`LooperEditor`** only reads `LooperProcessor::getStatus()` and the
+  overview 30 times a second and sends switch events; it never touches the
+  engine.
+
 ## Adding a completely new plugin
 
 1. Create `plugins/MyEffect/` with `Source/` and a `CMakeLists.txt`:
@@ -167,7 +203,7 @@ little smaller so neighbouring rings never overlap. Render every editor with
 
 ## Tests
 
-`tests/` builds one console runner, `oap_dsp_tests`:
+`tests/` builds two console runners. `oap_dsp_tests` tests the DSP directly:
 
 - `DspTests.cpp`: biquads, the tone stack model, cabinets and IRs, the Drive
   and Clean amps (stability at 44.1-192 kHz and block sizes 1-2048, silence,
@@ -175,9 +211,20 @@ little smaller so neighbouring rings never overlap. Render every editor with
 - `FxTests.cpp`: the effect building blocks and every effect (parameter specs,
   stress with random automation, decay to silence, levels, CPU),
 - `EffectAmpTests.cpp`: every effect amp (model validity, stress, silence,
-  calibrated levels, FX knobs, gates).
+  calibrated levels, FX knobs, gates),
+- `LooperTests.cpp`: the looper engine (sample-exact playback and loop point,
+  overdub layers, undo/redo, the switch gestures, stop modes, speed and
+  reverse, tempo sync, memory limits, and copying / loading / resizing the
+  loop from another thread while audio runs, starts and stops) and the loop
+  helpers. `oap_dsp_tests --only looper` runs just these.
 
-Run it after every DSP change. For host-level testing,
+`oap_plugin_tests` (`PluginTests.cpp`) tests the plugin layer: it runs the
+Looper like a host does, with its audio on a separate thread, and checks the
+session state (the loop is saved and restored exactly, also at awkward
+moments and from broken data), sample-rate changes, audio files, host tempo,
+switches mapped to parameters, bus layouts and the editor.
+
+Run them after every change to the DSP or to a processor. For host-level testing,
 [pluginval](https://github.com/Tracktion/pluginval) is recommended:
 
 ```bash
