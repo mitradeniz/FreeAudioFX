@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/formats-VST3%20%7C%20AU%20%7C%20Standalone-19b3a3?style=flat-square" alt="Formats: VST3, AU, Standalone">
   <img src="https://img.shields.io/badge/macOS%20%7C%20Windows%20%7C%20Linux-555?style=flat-square" alt="Platforms: macOS, Windows, Linux">
   <img src="https://img.shields.io/badge/built%20with-JUCE%209%20%C2%B7%20C%2B%2B17-555?style=flat-square" alt="Built with JUCE 9 and C++17">
-  <img src="https://img.shields.io/badge/plugins-33-ff5a1f?style=flat-square" alt="33 plugins">
+  <img src="https://img.shields.io/badge/plugins-44-ff5a1f?style=flat-square" alt="44 plugins">
   <img src="https://img.shields.io/badge/price-free-2ea44f?style=flat-square" alt="Price: free">
 </p>
 
@@ -15,7 +15,7 @@
   <b>Plug in your guitar, open your DAW, turn some knobs.</b><br>
   Open Audio Plugins is a growing collection of free, open audio plugins: practical tools with clear interfaces,<br>
   reliable performance and no unnecessary restrictions. 🎸<br><br>
-  <b>2 amps · 10 effect amps · 20 pedals · 1 Pedalboard</b><br>
+  <b>2 amps · 21 effect amps · 20 pedals · 1 Pedalboard</b>, every amp with its own artwork<br>
   VST3 · Audio Unit · Standalone, on macOS, Windows and Linux
 </p>
 
@@ -31,7 +31,7 @@
 
 > [!NOTE]
 > **Early development.** There are no downloadable builds yet, so for now you build the plugins yourself.
-> Don't worry: it's copy-paste, about 10 minutes, mostly waiting. The [step-by-step guide](#step-by-step) covers every click.
+> Don't worry: it's copy-paste, about 15 minutes, mostly waiting. The [step-by-step guide](#step-by-step) covers every click.
 
 ---
 
@@ -41,7 +41,7 @@
 | | What | Plugins |
 | --- | --- | --- |
 | 🔥💎 | **[Amps](#amps)** | Drive Amp, Clean Amp |
-| 🌈 | **[Effect amps](#effect-amps)**: an amp and its genre's effects in one plugin | Dream, Dub, Space Delay, Black Metal, Warm Rock, Surf, Shoegaze, Arena, Stereo Jazz, Doom |
+| 🌈 | **[Effect amps](#effect-amps)**: an amp and its genre's effects in one plugin | Dream, Dub, Space Delay, Black Metal, Warm Rock, Surf, Shoegaze, Arena, Stereo Jazz, Doom, Crunch, 8-Bit, Knight, Heavy Metal, Synthwave, Western, Funk, Pharaoh, Sakura, Persian, Choir |
 | 🦶 | **[Pedals](#pedals)**: 12 everyday + 8 advanced stompboxes | Compressor, Boost, Overdrive, Distortion, Fuzz, Chorus, Flanger, Phaser, Tremolo, Delay, Reverb, Wah · Shimmer, Tape Echo, Pitch Shifter, Envelope Filter, Rotary, Freeze, Guitar Synth, Lo-Fi |
 | 🧩 | **[Pedalboard](#pedalboard)**: any eight pedals in one plugin | Pedalboard |
 
@@ -86,25 +86,89 @@ Pristine cleans that get warm and hairy when you turn the Volume up and dig in.
 ### 🌈 Effect amps: one sound, one plugin
 
 <p align="center">
-  <img src="docs/assets/effect-amps.gif" width="100%" alt="The ten OAP effect amps shown one after another">
+  <img src="docs/assets/effect-amps.gif" width="100%" alt="Every OAP effect amp shown one after another">
 </p>
 
-Each effect amp is a complete rig built around one sound: an amp voiced for the genre, plus the effects it's known for, already dialled in and boiled down to a few knobs. Load one and play.
+Each effect amp is a complete rig built around one sound: an amp voiced for the genre, plus the effects it's known for, already dialled in and boiled down to a few knobs. And each one has its own artwork, from a space dream to a horned skull, so you can tell them apart at a glance. Load one and play.
 
-| Amp | Sounds like | Built-in effects |
-| --- | --- | --- |
-| 🌌 **Dream Amp** | Glassy dream-pop and ambient cleans | wide chorus, ping-pong echo, shimmer reverb |
-| 🌴 **Dub Amp** | Crisp reggae skanks and dub throws | tape echo that runs away, spring |
-| 🛸 **Space Delay Amp** | Warm crunch for space rock | three-head tape echo, spring |
-| 🖤 **Black Metal Amp** | Cold, trebly buzzsaw | gate, cathedral hall |
-| 🥃 **Warm Rock Amp** | British crunch and classic-rock leads | analog delay, plate |
-| 🏄 **Surf Amp** | Twangy, drippy instrumentals | spring tank, tremolo |
-| 🌫️ **Shoegaze Amp** | A wall of fuzz and wash | fuzz, vibrato, huge hall |
-| 🏟️ **Arena Amp** | 80s stadium leads | gate, stereo chorus, ping-pong delay, plate |
-| 🎷 **Stereo Jazz Amp** | Pristine solid-state cleans | stereo chorus / vibrato, spring |
-| 🌋 **Doom Amp** | Fuzz into a cranked amp, low and slow | gate, fuzz, slow phaser, room |
+| Amp | Sounds like | Built-in effects | Artwork |
+| --- | --- | --- | --- |
+| 🌌 **Dream Amp** | Glassy dream-pop and ambient cleans | wide chorus, ping-pong echo, shimmer reverb | moon, planets and dream clouds |
+| 🌴 **Dub Amp** | Crisp reggae skanks and dub throws | tape echo that runs away, spring | sunburst, palms and a sound system |
+| 🛸 **Space Delay Amp** | Warm crunch for space rock | three-head tape echo, spring | rocket, ringed planet and tape reels |
+| 🖤 **Black Metal Amp** | Cold, trebly buzzsaw | gate, cathedral hall | horned skull, pentagram and a dead forest |
+| 🥃 **Warm Rock Amp** | British crunch and classic-rock leads | analog delay, plate | winged pick, sunset, vinyl and flames |
+| 🏄 **Surf Amp** | Twangy, drippy instrumentals | spring tank, tremolo | a curling wave, palms and surfboards |
+| 🌫️ **Shoegaze Amp** | A wall of fuzz and wash | fuzz, vibrato, huge hall | hazy bokeh and blurred flowers |
+| 🏟️ **Arena Amp** | 80s stadium leads | gate, stereo chorus, ping-pong delay, plate | spotlights and a crowd |
+| 🎷 **Stereo Jazz Amp** | Pristine solid-state cleans | stereo chorus / vibrato, spring | a night skyline and floating notes |
+| 🌋 **Doom Amp** | Fuzz into a cranked amp, low and slow | gate, fuzz, slow phaser, room | volcanoes and a black eclipse |
+| 🍸 **Crunch Amp** | Plexi-style crunch, rock'n'roll, punk | treble booster, room | an art-deco cocktail bar |
+| 👾 **8-Bit Amp** | Chiptune and game music | square-wave synth, bit crusher, echo | pixel hearts, coins and bricks |
+| 🛡️ **Knight Amp** | Heroic power-metal leads | gate, harmony voice, ping-pong echo, hall | a castle and a dragon across the moon |
+| ⚡ **Heavy Metal Amp** | 80s heavy metal | gate, tight boost, delay, plate | a lightning storm |
+| 🌆 **Synthwave Amp** | Neon 80s cleans | wide chorus, flanger, tempo-synced echo, plate | a neon sun over a grid |
+| 🤠 **Western Amp** | Twang and desert themes | slapback, tremolo, spring | mesas, cacti and a sheriff's star |
+| 🪩 **Funk Amp** | Funk, disco and neo-soul | compressor, envelope filter, phaser | a disco ball and 70s stripes |
+| 🏺 **Pharaoh Amp** | Desert crunch with an oud-like bite | tape echo, slow phaser, temple hall | pyramids and a sun with an eye |
+| 🌸 **Sakura Amp** | City pop and J-rock cleans | compressor, chorus, echo, plate | Mt Fuji, cherry blossoms and waves |
+| 🕌 **Persian Amp** | Silky clean with an octave sparkle | octave-up voice, echo, palace hall | tile stars and a golden arch |
+| ⛪ **Choir Amp** | Heavenly swells | choir shimmer, cathedral reverb | a rose window, arches and candles |
 
 Every effect amp also has **Gain, Bass, Middle, Treble, Master, Output** and the **cabinet / IR loader**. 📖 [Effect amp manual](docs/plugins/EffectAmps.md)
+
+<details>
+<summary><b>🖼️ See every amp</b></summary>
+<br>
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/assets/amps/dream.png" width="100%" alt="OAP Dream Amp"><br><sub>🌌 <b>Dream Amp</b></sub></td>
+    <td width="50%"><img src="docs/assets/amps/dub.png" width="100%" alt="OAP Dub Amp"><br><sub>🌴 <b>Dub Amp</b></sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/assets/amps/spacedelay.png" width="100%" alt="OAP Space Delay Amp"><br><sub>🛸 <b>Space Delay Amp</b></sub></td>
+    <td width="50%"><img src="docs/assets/amps/blackmetal.png" width="100%" alt="OAP Black Metal Amp"><br><sub>🖤 <b>Black Metal Amp</b></sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/assets/amps/warmrock.png" width="100%" alt="OAP Warm Rock Amp"><br><sub>🥃 <b>Warm Rock Amp</b></sub></td>
+    <td width="50%"><img src="docs/assets/amps/surf.png" width="100%" alt="OAP Surf Amp"><br><sub>🏄 <b>Surf Amp</b></sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/assets/amps/shoegaze.png" width="100%" alt="OAP Shoegaze Amp"><br><sub>🌫️ <b>Shoegaze Amp</b></sub></td>
+    <td width="50%"><img src="docs/assets/amps/arena.png" width="100%" alt="OAP Arena Amp"><br><sub>🏟️ <b>Arena Amp</b></sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/assets/amps/stereojazz.png" width="100%" alt="OAP Stereo Jazz Amp"><br><sub>🎷 <b>Stereo Jazz Amp</b></sub></td>
+    <td width="50%"><img src="docs/assets/amps/doom.png" width="100%" alt="OAP Doom Amp"><br><sub>🌋 <b>Doom Amp</b></sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/assets/amps/crunch.png" width="100%" alt="OAP Crunch Amp"><br><sub>🍸 <b>Crunch Amp</b></sub></td>
+    <td width="50%"><img src="docs/assets/amps/eightbit.png" width="100%" alt="OAP 8-Bit Amp"><br><sub>👾 <b>8-Bit Amp</b></sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/assets/amps/knight.png" width="100%" alt="OAP Knight Amp"><br><sub>🛡️ <b>Knight Amp</b></sub></td>
+    <td width="50%"><img src="docs/assets/amps/heavymetal.png" width="100%" alt="OAP Heavy Metal Amp"><br><sub>⚡ <b>Heavy Metal Amp</b></sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/assets/amps/synthwave.png" width="100%" alt="OAP Synthwave Amp"><br><sub>🌆 <b>Synthwave Amp</b></sub></td>
+    <td width="50%"><img src="docs/assets/amps/western.png" width="100%" alt="OAP Western Amp"><br><sub>🤠 <b>Western Amp</b></sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/assets/amps/funk.png" width="100%" alt="OAP Funk Amp"><br><sub>🪩 <b>Funk Amp</b></sub></td>
+    <td width="50%"><img src="docs/assets/amps/pharaoh.png" width="100%" alt="OAP Pharaoh Amp"><br><sub>🏺 <b>Pharaoh Amp</b></sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/assets/amps/sakura.png" width="100%" alt="OAP Sakura Amp"><br><sub>🌸 <b>Sakura Amp</b></sub></td>
+    <td width="50%"><img src="docs/assets/amps/persian.png" width="100%" alt="OAP Persian Amp"><br><sub>🕌 <b>Persian Amp</b></sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/assets/amps/choir.png" width="100%" alt="OAP Choir Amp"><br><sub>⛪ <b>Choir Amp</b></sub></td>
+    <td width="50%"></td>
+  </tr>
+</table>
+
+</details>
 
 <a id="pedals"></a>
 ### 🦶 Pedals: 12 everyday, 8 advanced
@@ -158,6 +222,16 @@ Pick any pedal for each of eight slots, reorder them with **<** and **>**, switc
 | Reggae and dub | 🌴 Dub Amp | automate **Feedback** for dub throws |
 | Black metal | 🖤 Black Metal Amp | the defaults |
 | Doom, stoner, sludge | 🌋 Doom Amp | **Fuzz** 8, tune low |
+| 80s heavy metal, thrash | ⚡ Heavy Metal Amp | **Boost** 5, **Middle** 7 |
+| Power metal, epic solos | 🛡️ Knight Amp | **Harmony** 5 on a 5th |
+| Punk, rock'n'roll | 🍸 Crunch Amp | **Gain** 7, **Booster** 5 |
+| Chiptune, game music | 👾 8-Bit Amp | **Chip** 8, single notes |
+| Funk, disco | 🪩 Funk Amp | **Quack** 7, muted strums |
+| City pop, J-rock cleans | 🌸 Sakura Amp | the defaults |
+| Synthwave, retro 80s | 🌆 Synthwave Amp | **Echo** 5, arpeggios |
+| Western, rockabilly, twang | 🤠 Western Amp | low strings, **Slapback** 5 |
+| Middle-Eastern melodies | 🏺 Pharaoh Amp / 🕌 Persian Amp | single-string slides / tremolo picking |
+| Worship, ambient swells | ⛪ Choir Amp | **Choir** 8, volume swells |
 | Your own rig | 🧩 Pedalboard → any amp | the default board |
 
 </details>
@@ -336,7 +410,7 @@ cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
 ✅ It worked if the last line says **`Build files have been written to: …`**
 
-Now build all 33 plugins. Grab a coffee ☕, the first build takes about 5-20 minutes:
+Now build all 44 plugins. Grab a coffee ☕, the first build takes about 5-20 minutes:
 
 ```bash
 cmake --build build
@@ -354,7 +428,7 @@ The build copies the plugins into your Mac's plug-in folders automatically. Chec
 ls ~/Library/Audio/Plug-Ins/VST3 ~/Library/Audio/Plug-Ins/Components
 ```
 
-You should see 33 `OAP … .vst3` plugins and 33 `OAP … .component` plugins, from `OAP Arena Amp` to `OAP Wah`. 🎉
+You should see 44 `OAP … .vst3` plugins and 44 `OAP … .component` plugins, from `OAP 8-Bit Amp` to `OAP Wah`. 🎉
 
 <details>
 <summary>🎧 <b>Optional: try an amp without a DAW first</b></summary>
@@ -459,6 +533,13 @@ Starting points to tweak by ear. Your guitar, pickups and playing will change ev
 | 🌴 **Dub skank** | Dub Amp | Bass 2 · Middle 6 · Treble 7 · Echo Time 375 ms · Feedback 6 · Echo 5 (crank Feedback at the end of a phrase) |
 | 🖤 **Tremolo-picked riffs** | Black Metal Amp | Gate -55 dB · Gain 8 · Bass 4 · Middle 3 · Treble 7 · Hall 5 · Decay 8 |
 | 🏄 **Surf twang** | Surf Amp | Bass 3 · Treble 8 · Dwell 8 · Reverb 7 · Intensity 0 |
+| ⚡ **Galloping riffs** | Heavy Metal Amp | Gate -55 dB · Gain 7 · Boost 5 · Middle 7 · Treble 6.5 · Delay 0 · Reverb 2 |
+| 🛡️ **Dragon-slaying solo** | Knight Amp | Gain 7 · Harmony 5 · Interval 5th · Echo 5 · Hall 5 |
+| 👾 **Boss level** | 8-Bit Amp | Chip 8 · Bits 6 · Crush 5 · Echo 4 (single notes, high on the neck) |
+| 🪩 **Disco strut** | Funk Amp | Squeeze 6 · Quack 7 · Range 3 · Phase 2 (muted sixteenths) |
+| 🌸 **City-pop chords** | Sakura Amp | Gain 4 · Treble 7 · Squeeze 5 · Chorus 5 · Echo 3 · Plate 4 |
+| 🤠 **Desert showdown** | Western Amp | Bass 6 · Treble 7 · Slapback 5 · Tremolo 4 · Speed 5 Hz · Spring 5 |
+| ⛪ **Cathedral swell** | Choir Amp | Gain 3 · Choir 8 · Voices Oct+5th · Cathedral 8 (swell with your volume knob) |
 
 **Pedal chains** (put the pedals before an amp, in this order, or load them into the Pedalboard):
 
@@ -524,7 +605,7 @@ Lower your DAW's **Buffer Size** (in its audio settings) to 64 or 128. The plugi
 <summary><b>It hisses or hums when I stop playing</b></summary>
 <br>
 
-Turn up the **Gate** (Drive Amp, Black Metal, Arena and Doom Amp) until the noise disappears between notes. Single-coil pickups hum near screens. Try turning away from your computer.
+Turn up the **Gate** (Drive Amp, Black Metal, Arena, Doom, Knight and Heavy Metal Amp) until the noise disappears between notes. Single-coil pickups hum near screens. Try turning away from your computer.
 
 </details>
 
@@ -592,7 +673,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    G([🎸 Guitar]) --> GATE["Gate<br/>(some amps)"] --> FUZZ["Fuzz<br/>(Shoegaze, Doom)"]
+    G([🎸 Guitar]) --> GATE["Gate<br/>(some amps)"] --> FUZZ["Pedals<br/>(fuzz, boost, synth, compressor…)"]
     subgraph OS["4x / 8x oversampled"]
         PRE["1-4 tube stages"] --> TS["Tone stack"] --> PWR["Power amp + sag"]
     end
@@ -600,11 +681,11 @@ flowchart LR
     PWR --> CAB["Cabinet / IR"] --> FX["Stereo effects<br/>chorus · delay · reverb…"] --> OUT([🔊 Output])
 ```
 
-<sub>Every effect amp: one shared engine, configured by a short description of the amp in <a href="shared/amps/AmpModels.cpp"><code>AmpModels.cpp</code></a>.</sub>
+<sub>Every effect amp: one shared engine, configured by a short description of the amp in <a href="shared/amps/AmpModels.cpp"><code>AmpModels.cpp</code></a>, plus an SVG scene drawn by <a href="tools/art/make_amp_art.py"><code>make_amp_art.py</code></a>.</sub>
 
 - **Mono amps, like real ones.** Stereo input is summed and the amp drives both speakers; reverbs, ping-pong delays and stereo choruses then spread it out.
 - **Low latency:** 6 samples for the amps, up to about 1 ms for the oversampled drive pedals, always reported to your DAW for compensation.
-- **Light on the CPU** (one core at 48 kHz, measured on an x86 machine): amps 1.5-5 %, effect amps 2.5-7 %, pedals 0.05-3.5 %.
+- **Light on the CPU** (one core at 48 kHz, measured on an x86 machine): amps 1.5-5 %, effect amps 2-8 %, pedals 0.05-3.5 %.
 - **Tested:** about 1,000 automated DSP checks (stability at 44.1-192 kHz with random automation, silence, aliasing, levels, impulse responses, every effect amp knob) and every plugin passes [pluginval](https://github.com/Tracktion/pluginval) at its strictest level.
 
 Want to dig deeper? 📚 [Plugin manuals](docs/plugins/) · [Using the plugins in your DAW](docs/DAWS.md) · [Building on every platform](docs/BUILDING.md) · [Developer guide](docs/DEVELOPMENT.md)
@@ -615,16 +696,17 @@ Want to dig deeper? 📚 [Plugin manuals](docs/plugins/) · [Using the plugins i
 FreeAudioFX/
 ├── plugins/
 │   ├── DriveAmp/ CleanAmp/   # the two amps
-│   ├── effectamps/           # 10 effect amps, one shared source file
+│   ├── effectamps/           # 21 effect amps, one shared source file
 │   ├── pedals/               # 20 pedals, one shared source file
 │   └── Pedalboard/
 ├── shared/
 │   ├── dsp/                  # amp building blocks: tubes, tone stacks, cabinets, gate
 │   ├── fx/                   # the effects library behind every pedal
 │   ├── amps/                 # effect amp models and engine
+│   ├── art/                  # the artwork of every amp (SVG)
 │   ├── plugin/ ui/           # plugin wrappers, knobs, editors
 ├── tests/                    # automated DSP tests
-├── tools/                    # editor snapshot renderer for the docs
+├── tools/                    # artwork generator and editor snapshot renderer
 ├── docs/                     # manuals, DAW guide, build guide, developer guide, artwork
 ├── cmake/                    # shared CMake helpers
 └── CMakeLists.txt            # top-level build (downloads JUCE automatically)
@@ -644,7 +726,8 @@ Python is used only for side jobs such as generating the README artwork, never i
 - [x] Build the first audio effects (Drive Amp, Clean Amp) and validate them with pluginval.
 - [x] Add automated DSP tests.
 - [x] 20 pedals (12 everyday, 8 advanced) and a Pedalboard.
-- [x] 10 effect amps.
+- [x] 21 effect amps.
+- [x] Artwork for every amp, with ornaments around the controls.
 - [ ] Hands-on testing in Ableton Live (incl. Lite), Logic Pro, GarageBand, REAPER, FL Studio, Cubase, Studio One and Bitwig on macOS and Windows, and REAPER/Bitwig/Ardour on Linux.
 - [ ] Presets and an input level meter.
 - [ ] Pro Tools (AAX) and CLAP builds.

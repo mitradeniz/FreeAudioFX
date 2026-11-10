@@ -71,13 +71,13 @@ yours, look for "plug-in manager", "rescan" or "VST3 folder" in its settings.
 
 ## Standalone apps
 
-The 12 amps and the Pedalboard also come as standalone apps, handy for
+All the amps and the Pedalboard also come as standalone apps, handy for
 practising without a DAW:
 
 | Plugin | Standalone app, after building (macOS shown) |
 | --- | --- |
 | Drive Amp, Clean Amp | `build/plugins/DriveAmp/DriveAmp_artefacts/Release/Standalone/OAP Drive Amp.app` (and `CleanAmp/…`) |
-| Effect amps | `build/plugins/effectamps/DreamAmp_artefacts/Release/Standalone/OAP Dream Amp.app` (and the other nine) |
+| Effect amps | `build/plugins/effectamps/DreamAmp_artefacts/Release/Standalone/OAP Dream Amp.app` (and all the others) |
 | Pedalboard | `build/plugins/Pedalboard/Pedalboard_artefacts/Release/Standalone/OAP Pedalboard.app` |
 
 On Windows the same folders contain `.exe` files, and on Linux plain

@@ -4,8 +4,8 @@ The project uses **CMake** and **JUCE 9.0.5**. JUCE is downloaded automatically
 the first time you configure, so the first configure needs an internet
 connection and takes a minute or two.
 
-One build produces all 33 plugins: 2 amps, 10 effect amps, 20 pedals and the
-Pedalboard, as VST3 everywhere, Audio Units on macOS, and standalone apps for
+One build produces every plugin in the collection: the 2 amps, 21 effect amps,
+20 pedals and the Pedalboard, as VST3 everywhere, Audio Units on macOS, and standalone apps for
 the amps and the Pedalboard. Once built, see [DAWS.md](DAWS.md) for loading
 them in your DAW.
 
@@ -63,7 +63,7 @@ cmake --build build --target OverdrivePedal_All   # every format of one plugin
 | Group | Target names |
 | --- | --- |
 | Amps | `DriveAmp`, `CleanAmp` |
-| Effect amps | `DreamAmp`, `DubAmp`, `SpaceDelayAmp`, `BlackMetalAmp`, `WarmRockAmp`, `SurfAmp`, `ShoegazeAmp`, `ArenaAmp`, `StereoJazzAmp`, `DoomAmp` |
+| Effect amps | `DreamAmp`, `DubAmp`, `SpaceDelayAmp`, `BlackMetalAmp`, `WarmRockAmp`, `SurfAmp`, `ShoegazeAmp`, `ArenaAmp`, `StereoJazzAmp`, `DoomAmp`, `CrunchAmp`, `EightBitAmp`, `KnightAmp`, `HeavyMetalAmp`, `SynthwaveAmp`, `WesternAmp`, `FunkAmp`, `PharaohAmp`, `SakuraAmp`, `PersianAmp`, `ChoirAmp` |
 | Pedals | `CompressorPedal`, `BoostPedal`, `OverdrivePedal`, `DistortionPedal`, `FuzzPedal`, `ChorusPedal`, `FlangerPedal`, `PhaserPedal`, `TremoloPedal`, `DelayPedal`, `ReverbPedal`, `WahPedal`, `ShimmerPedal`, `TapeEchoPedal`, `PitchPedal`, `EnvFilterPedal`, `RotaryPedal`, `FreezePedal`, `SynthPedal`, `LoFiPedal` |
 | Pedalboard | `Pedalboard` |
 
@@ -101,6 +101,7 @@ auval -v aufx Drva Oapl   # OAP Drive Amp
 
 # or all of them:
 for code in Drva Clna Drem Dubx Spdl Blkm Wrmr Surf Shgz Aren Stjz Doom \
+            Crch Chip Kngt Hvym Snwv Wstn Funk Phrh Skra Prsn Chir \
             Comp Bost Ovdr Dist Fuzz Chor Flng Phsr Trem Dlay Revb Wahx \
             Shim Tape Ptch Envf Rota Frez Synt Lofi Pdbd; do
   auval -v aufx $code Oapl | tail -1
