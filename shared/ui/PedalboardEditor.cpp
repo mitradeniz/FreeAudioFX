@@ -84,6 +84,9 @@ PedalSlot::PedalSlot (PedalboardProcessor& p, int slotIndex) : board (p), index 
         if (auto* on = board.getParameters().getParameter (PedalboardProcessor::onId (index)))
             on->setValueNotifyingHost (footswitch.getToggleState() ? 0.0f : 1.0f);
     };
+    // The LED is drawn by the slot, not by the footswitch, so it must be
+    // repainted whenever the footswitch changes state.
+    footswitch.onStateChange = [this] { repaint (ledArea.toNearestInt().expanded (8)); };
     addAndMakeVisible (footswitch);
 
     refresh();
