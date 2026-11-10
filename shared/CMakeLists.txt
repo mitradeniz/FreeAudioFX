@@ -39,7 +39,7 @@ juce_add_binary_data(oap_art HEADER_NAME OapArt.h NAMESPACE OapArt SOURCES ${oap
 set_target_properties(oap_art PROPERTIES FOLDER "shared")
 
 # Shared plugin base classes and UI components, plus the effect amps (models,
-# engine, processor and editor).
+# engine, processor and editor) and the Looper (processor and editor).
 set(oap_ui_sources
     "${CMAKE_CURRENT_SOURCE_DIR}/amps/AmpModels.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/amps/EffectAmpEngine.cpp"
@@ -49,9 +49,11 @@ set(oap_ui_sources
     "${CMAKE_CURRENT_SOURCE_DIR}/ui/AmpControls.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/ui/PedalEditor.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/ui/PedalboardEditor.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ui/LooperEditor.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/plugin/AmpProcessorBase.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/plugin/PedalProcessor.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/plugin/PedalboardProcessor.cpp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/plugin/PedalboardProcessor.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/plugin/LooperProcessor.cpp")
 
 if(OAP_SHARED_JUCE)
     # Compiled once and linked into every plugin.

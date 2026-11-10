@@ -48,6 +48,7 @@ if(OAP_BUILD_PLUGINS)
     add_subdirectory(plugins/effectamps)
     add_subdirectory(plugins/pedals)
     add_subdirectory(plugins/Pedalboard)
+    add_subdirectory(plugins/Looper)
 endif()
 
 if(OAP_BUILD_TESTS)
