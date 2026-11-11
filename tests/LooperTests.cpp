@@ -1,5 +1,6 @@
 // Tests for the looper engine: exact playback, the loop point, overdub layers,
-// undo/redo, switch gestures, stop modes, speed and reverse, tempo sync, and
+// undo/redo, switch gestures, stop modes, speed and reverse, tempo sync, the
+// auto loop and the guide rhythms, and
 // saving / loading / resizing the loop while "audio" is running - and while it
 // starts and stops. Also the loop helpers (sample-rate conversion, overview).
 
@@ -17,7 +18,9 @@
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <cstring>
 #include <functional>
+#include <string>
 #include <random>
 #include <thread>
 #include <vector>
@@ -967,6 +970,18 @@ void testStress()
             else if (pick < 0.415f) rig.engine.doubleLength (true);
             else if (pick < 0.42f)  rig.engine.halveLength (true);
             else if (pick < 0.425f) { std::vector<float> a, b; double bpm; std::uint32_t g; rig.engine.copyLoop (a, b, bpm, g, true); }
+            else if (pick < 0.44f)  rig.settings.autoLoop = ! rig.settings.autoLoop;
+            else if (pick < 0.45f)  rig.settings.autoLayers = (int) (uni (rng) * 3.99f);
+            else if (pick < 0.46f)  rig.settings.countInBars = (int) (uni (rng) * 2.99f);
+            else if (pick < 0.47f)  rig.settings.rhythm = (int) (uni (rng) * (float) RhythmGuide::numPatterns);
+            else if (pick < 0.48f)
+            {
+                static constexpr int meters[][2] = { { 4, 4 }, { 3, 4 }, { 6, 8 }, { 7, 8 }, { 5, 4 }, { 12, 8 } };
+                const auto& m = meters[(int) (uni (rng) * 5.99f)];
+                rig.timing.numerator = m[0];
+                rig.timing.denominator = m[1];
+                rig.timing.beatsPerBar = 4.0 * m[0] / m[1];
+            }
 
             const int n = 1 + (int) (uni (rng) * uni (rng) * 2047.0f);
             for (int i = 0; i < n; ++i)
@@ -985,13 +1000,363 @@ void testStress()
 
             const auto st = rig.engine.getStatus();
             sane = sane && st.layers >= 0 && st.lengthSeconds >= 0.0 && st.lengthSeconds <= LooperEngine::maxSeconds + 1.0
-                        && st.positionSeconds >= 0.0 && (st.lengthSeconds == 0.0 || st.positionSeconds <= st.lengthSeconds + 1.0);
+                        && st.positionSeconds >= 0.0 && (st.lengthSeconds == 0.0 || st.positionSeconds <= st.lengthSeconds + 1.0)
+                        && st.countIn >= 0.0 && st.countIn <= st.countInLength + 1.0e-6 && st.autoLayer <= st.autoLayers
+                        && (st.autoRunning || (st.countIn == 0.0 && st.autoLayer == 0));
         }
     }
 
     check (finite, "output stays finite with random presses, settings, tempo changes and block sizes");
     check (bounded, "output stays bounded");
     check (sane, "the reported status is always sane");
+}
+
+//==============================================================================
+/** Where the loop played by `rig` currently comes from: a copy of it. */
+std::vector<float> loopCopy (Rig& rig)
+{
+    std::vector<float> l, r;
+    double bpm = 0.0;
+    std::uint32_t generation = 0;
+    rig.engine.copyLoop (l, r, bpm, generation, true);
+    return l;
+}
+
+void testAutoLoop()
+{
+    section ("Looper: auto loop");
+
+    {
+        // Nothing keeps time yet (no host, no rhythm): the count-in starts with the press.
+        Rig rig;
+        rig.settings.autoLoop = true;
+        rig.settings.countInBars = 1;
+        rig.settings.monitor = false; // so the output is just the rhythm and the loop
+        rig.timing.bpm = 120.0;
+        rig.input = [&rig] (std::int64_t n) { return signalA (n, rig.fs); };
+        rig.seconds (0.3);
+
+        rig.tapMain();
+        const auto pressedAt = rig.now;
+        auto st = rig.engine.getStatus();
+        check (st.state == State::Armed && st.autoRunning && std::abs (st.countIn - 4.0) < 1.0e-9 && std::abs (st.countInLength - 4.0) < 1.0e-9,
+               "one press arms an auto loop with a one-bar count-in");
+        check (st.autoLayers == 0 && st.autoLayer == 0, "(no automatic layers asked for)");
+
+        rig.run (48000);
+        st = rig.engine.getStatus();
+        check (st.state == State::Armed && std::abs (st.countIn - 2.0) < 0.02, "the count-in counts down");
+        check (rms (rig.out, pressedAt, pressedAt + 48000) > 0.005, "the count-in can be heard");
+
+        const std::int64_t recordStart = pressedAt + 96000; // one bar at 120 BPM
+        rig.run (recordStart - rig.now - 300);
+        check (rig.state() == State::Armed, "still counting in just before the bar line");
+        rig.run (600);
+        st = rig.engine.getStatus();
+        check (st.state == State::Recording && std::abs (st.targetSeconds - 8.0) < 1.0e-9,
+               "then it records, four bars long when no length is chosen");
+        rig.run (48000);
+        check (rms (rig.out, recordStart, rig.now) > 0.005, "the rhythm keeps time during the recording");
+
+        const std::int64_t closeAt = recordStart + 384000;
+        rig.run (closeAt - rig.now - 300);
+        check (rig.state() == State::Recording, "(recording)");
+        rig.run (600);
+        st = rig.engine.getStatus();
+        check (st.state == State::Playing && rig.lengthSamples() == 384000 && st.layers == 1 && ! st.autoRunning
+                   && std::abs (st.loopBpm - 120.0) < 1.0e-9,
+               "the loop closes by itself after exactly four bars and plays");
+
+        const auto loop = loopCopy (rig);
+        bool exact = (int) loop.size() == 384000;
+        for (int k = 0; exact && k < 384000 - 1000; ++k)
+            exact = loop[(size_t) k] == signalA (recordStart + k, rig.fs);
+        check (exact, "the recording starts exactly on the bar line after the count-in, and holds no rhythm");
+
+        rig.settings.level = 0.0f; // the loop silent: what is left is the rhythm
+        rig.seconds (0.5);
+        check (rms (rig.out, rig.now - 12000, rig.now) < 1.0e-6, "once the loop plays on its own, the rhythm stops");
+    }
+
+    {
+        // Two automatic layers, no count-in: record, layer, layer, play - one loop cycle each.
+        Rig rig;
+        rig.settings.autoLoop = true;
+        rig.settings.countInBars = 0;
+        rig.settings.autoLayers = 2;
+        rig.settings.fixedBars = 1.0;
+        rig.settings.monitor = false;
+        rig.timing.bpm = 120.0;
+        constexpr int L = 96000;
+        std::int64_t start = 0;
+        rig.input = [&rig, &start] (std::int64_t n)
+        {
+            if (n < start)          return 0.0f;
+            if (n < start + L)      return signalA (n, rig.fs);
+            if (n < start + 2 * L)  return signalB (n, rig.fs);
+            if (n < start + 3 * L)  return signalC (n, rig.fs);
+            return 0.0f;
+        };
+        rig.seconds (0.25);
+        start = rig.now;
+        rig.tapMain();
+        rig.run (256);
+        check (rig.state() == State::Recording, "without a count-in the recording starts at once");
+
+        rig.run (start + L + L / 2 - rig.now);
+        auto st = rig.engine.getStatus();
+        check (st.state == State::Overdubbing && st.autoRunning && st.autoLayer == 1 && st.autoLayers == 2,
+               "after the recording the first automatic layer is recorded");
+        rig.run (start + 2 * L + L / 2 - rig.now);
+        st = rig.engine.getStatus();
+        check (st.state == State::Overdubbing && st.autoLayer == 2 && st.layers == 3, "then the second, one loop cycle later");
+        rig.run (start + 3 * L + 4800 - rig.now);
+        st = rig.engine.getStatus();
+        check (st.state == State::Playing && st.layers == 3 && ! st.autoRunning && st.autoLayer == 0,
+               "and then the loop plays, with three layers");
+
+        const auto loop = loopCopy (rig);
+        double worst = 0.0;
+        for (int k = 3000; k < L - 3000; ++k)
+        {
+            const double expected = (double) signalA (start + k, rig.fs) + signalB (start + L + k, rig.fs) + signalC (start + 2 * L + k, rig.fs);
+            worst = std::max (worst, std::abs ((double) loop[(size_t) k] - expected));
+        }
+        check (worst < 1.0e-5, "each layer lands exactly on the loop");
+
+        rig.engine.undoSwitch();
+        rig.run (256);
+        const auto undone = loopCopy (rig);
+        worst = 0.0;
+        for (int k = 3000; k < L - 3000; ++k)
+        {
+            const double expected = (double) signalA (start + k, rig.fs) + signalB (start + L + k, rig.fs);
+            worst = std::max (worst, std::abs ((double) undone[(size_t) k] - expected));
+        }
+        check (rig.engine.getStatus().layers == 2 && worst < 1.0e-5, "undo takes back the last automatic layer");
+    }
+
+    {
+        // Taking over: a press during an automatic layer finishes it, and nothing more happens.
+        Rig rig;
+        rig.settings.autoLoop = true;
+        rig.settings.countInBars = 0;
+        rig.settings.autoLayers = 3;
+        rig.settings.fixedBars = 1.0;
+        rig.timing.bpm = 120.0;
+        rig.input = [&rig] (std::int64_t n) { return signalA (n, rig.fs); };
+        rig.tapMain();
+        rig.run (96000 + 30000);
+        check (rig.engine.getStatus().autoLayer == 1, "(first automatic layer)");
+        rig.tapMain();
+        rig.run (256);
+        auto st = rig.engine.getStatus();
+        check (st.state == State::Playing && ! st.autoRunning, "a press finishes the layer and ends the automation");
+        rig.run (2 * 96000);
+        check (rig.state() == State::Playing && rig.engine.getStatus().layers == 2, "no further layers are recorded");
+
+        rig.engine.clear();
+        rig.run (4800);
+        rig.settings.countInBars = 2;
+        rig.tapMain();
+        rig.run (48000);
+        check (rig.state() == State::Armed && std::abs (rig.engine.getStatus().countIn - 6.0) < 0.02, "a two-bar count-in");
+        rig.tapStop();
+        rig.run (256);
+        st = rig.engine.getStatus();
+        check (st.state == State::Empty && ! st.autoRunning && st.countIn == 0.0, "stop during the count-in cancels the auto loop");
+
+        rig.tapMain();
+        rig.run (256);
+        rig.tapMain();
+        rig.run (256);
+        check (rig.state() == State::Empty, "and so does a second press");
+    }
+
+    {
+        // With the host playing, the recording starts on a bar line at least a bar away.
+        Rig rig;
+        rig.settings.autoLoop = true;
+        rig.settings.countInBars = 1;
+        rig.settings.fixedBeats = 2.0;
+        rig.timing.bpm = 120.0;
+        rig.input = [&rig] (std::int64_t n) { return signalA (n, rig.fs); };
+        rig.startHost (1.5);
+        rig.run (9600); // beat 1.9
+        rig.tapMain();
+        auto st = rig.engine.getStatus();
+        check (st.state == State::Armed && std::abs (st.countIn - 6.1) < 0.02,
+               "pressed at beat 1.9, the bar line at beat 4 is too close: the recording starts at beat 8");
+        const std::int64_t at = rig.hostStartSample + (std::int64_t) ((8.0 - 1.5) * 24000.0);
+        rig.run (at - rig.now - 300);
+        check (rig.state() == State::Armed, "(counting in)");
+        rig.run (600);
+        st = rig.engine.getStatus();
+        check (st.state == State::Recording && std::abs (st.targetSeconds - 1.0) < 1.0e-9, "on the bar line, for the chosen two beats");
+
+        // the host jumps while the next auto loop counts in: the count-in starts again from there
+        rig.run (48000 + 4800);
+        check (rig.state() == State::Playing, "(the two beats are recorded and play)");
+        rig.engine.clear();
+        rig.run (4800);
+        rig.tapMain();
+        rig.run (256);
+        rig.startHost (33.0);
+        rig.run (256);
+        st = rig.engine.getStatus();
+        check (st.state == State::Armed && std::abs (st.countIn - 7.0) < 0.05, "after a jump of the host, the count-in starts again");
+    }
+
+    {
+        // With the rhythm already playing, the count-in waits for its bar line instead of restarting it.
+        Rig rig;
+        rig.settings.autoLoop = true;
+        rig.settings.click = true;
+        rig.settings.countInBars = 1;
+        rig.timing.bpm = 120.0;
+        rig.run (24000 * 5 + 12000); // beat 5.5
+        rig.tapMain();
+        check (std::abs (rig.engine.getStatus().countIn - 6.5) < 0.02, "the running rhythm isn't interrupted: recording starts at beat 12");
+    }
+}
+
+//==============================================================================
+/** Counts the onsets (sudden rises above `threshold`) in the output. */
+int countOnsets (const std::vector<float>& x, std::int64_t from, std::int64_t to, float threshold)
+{
+    int onsets = 0;
+    std::int64_t quietSince = from - 100000;
+    for (std::int64_t i = from; i < to; ++i)
+    {
+        if (std::abs (x[(size_t) i]) > threshold)
+        {
+            if (i - quietSince > 1200) // 25 ms of quiet before it
+                ++onsets;
+            quietSince = i;
+        }
+    }
+    return onsets;
+}
+
+void testRhythms()
+{
+    section ("Looper: rhythms");
+
+    std::vector<std::vector<float>> outputs;
+    bool finite = true, bounded = true, audible = true;
+    double loudest = 0.0;
+
+    for (int p = 0; p < RhythmGuide::numPatterns; ++p)
+    {
+        Rig rig;
+        rig.settings.click = true;
+        rig.settings.rhythm = p;
+        rig.settings.rhythmLevel = 1.0f;
+        rig.settings.monitor = false;
+        rig.timing.bpm = 100.0;
+        rig.seconds (4.8); // two bars
+        double peak = 0.0;
+        for (float v : rig.out)
+        {
+            finite = finite && std::isfinite (v);
+            peak = std::max (peak, (double) std::abs (v));
+        }
+        loudest = std::max (loudest, peak);
+        bounded = bounded && peak < 1.0;
+        audible = audible && rms (rig.out, 0, rig.now) > 0.01;
+        outputs.push_back (rig.out);
+    }
+
+    std::printf ("  %d patterns, the loudest peaks at %.1f dBFS at full rhythm level\n", RhythmGuide::numPatterns, testing::db (loudest));
+    check (finite && bounded, "every pattern stays finite and below full scale");
+    check (audible, "every pattern can be heard");
+
+    bool distinct = true;
+    for (size_t a = 0; a < outputs.size(); ++a)
+        for (size_t b = a + 1; b < outputs.size(); ++b)
+            distinct = distinct && maxDifference (outputs[a], outputs[b], 0, (int) outputs[a].size()) > 0.01;
+    check (distinct, "every pattern sounds different");
+
+    bool named = true;
+    for (int p = 0; p < RhythmGuide::numPatterns; ++p)
+        named = named && std::strlen (RhythmGuide::patternName (p)) > 0;
+    check (named && std::strlen (RhythmGuide::patternName (RhythmGuide::numPatterns)) == 0, "every pattern has a name");
+
+    // The click in different time signatures: how many clicks in one bar.
+    struct MeterCase { int numerator, denominator, pattern, clicks; const char* what; };
+    const MeterCase cases[] = {
+        { 4, 4, 0, 4, "4/4: four beats" },
+        { 3, 4, 0, 3, "3/4: three beats" },
+        { 6, 8, 0, 6, "6/8: six eighths" },
+        { 7, 8, 0, 7, "7/8: seven eighths" },
+        { 4, 4, 1, 8, "4/4 with eighths: eight clicks" },
+        { 4, 4, 2, 12, "4/4 with triplets: twelve clicks" },
+        { 4, 4, 4, 8, "4/4 shuffle: two clicks a beat" },
+    };
+
+    for (const auto& c : cases)
+    {
+        Rig rig;
+        rig.settings.click = true;
+        rig.settings.rhythm = c.pattern;
+        rig.settings.monitor = false;
+        rig.timing.bpm = 60.0;
+        rig.timing.numerator = c.numerator;
+        rig.timing.denominator = c.denominator;
+        rig.timing.beatsPerBar = 4.0 * c.numerator / c.denominator;
+        const auto bar = (std::int64_t) std::llround (rig.timing.beatsPerBar * 48000.0);
+        rig.run (bar + 2400);
+        check (countOnsets (rig.out, 0, bar - 100, 0.02f) == c.clicks, c.what);
+        check (rig.engine.getStatus().numerator == c.numerator && rig.engine.getStatus().denominator == c.denominator,
+               std::string ("  and the time signature is reported (") + c.what + ")");
+    }
+
+    {
+        // The first beat of the bar is accented; in 6/8 the fourth eighth too, a little less.
+        Rig rig;
+        rig.settings.click = true;
+        rig.settings.monitor = false;
+        rig.timing.bpm = 60.0;
+        rig.timing.numerator = 6;
+        rig.timing.denominator = 8;
+        rig.timing.beatsPerBar = 3.0;
+        rig.run (3 * 48000);
+        const auto peakAt = [&rig] (double quarters)
+        {
+            const auto from = (std::int64_t) (quarters * 48000.0);
+            double peak = 0.0;
+            for (std::int64_t i = from; i < from + 2400; ++i)
+                peak = std::max (peak, (double) std::abs (rig.out[(size_t) i]));
+            return peak;
+        };
+        check (peakAt (0.0) > peakAt (1.5) && peakAt (1.5) > peakAt (0.5), "6/8: the bar is accented, then the second dotted quarter");
+    }
+
+    {
+        // A time signature that doesn't match the bar length: the bar length wins.
+        Rig rig;
+        rig.settings.click = true;
+        rig.timing.beatsPerBar = 3.0;
+        rig.seconds (0.1);
+        check (rig.engine.getStatus().numerator == 3 && rig.engine.getStatus().denominator == 4, "4/4 with three beats a bar counts as 3/4");
+    }
+
+    {
+        // The drum grooves are in time: the kick of Rock lands on the bar line.
+        Rig rig;
+        rig.settings.click = true;
+        rig.settings.rhythm = RhythmGuide::numClickPatterns; // Rock
+        rig.settings.monitor = false;
+        rig.timing.bpm = 120.0;
+        rig.startHost (3.75); // the transport starts a sixteenth before a bar line
+        rig.run (6000 + 2400);
+        double before = 0.0, after = 0.0;
+        for (std::int64_t i = 0; i < 5900; ++i)
+            before = std::max (before, (double) std::abs (rig.out[(size_t) i]));
+        for (std::int64_t i = 6000; i < 8400; ++i)
+            after = std::max (after, (double) std::abs (rig.out[(size_t) i]));
+        check (before < 1.0e-6 && after > 0.1, "a groove joins the host on the next step, not in the middle of one");
+    }
 }
 
 //==============================================================================
@@ -1210,6 +1575,8 @@ void runLooperTests()
     testLoopIdentity();
     testWithAudioThread();
     testAudioStartingAndStopping();
+    testAutoLoop();
+    testRhythms();
     testStress();
     testLoopUtils();
 }

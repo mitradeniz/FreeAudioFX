@@ -67,6 +67,9 @@ void LooperEngine::prepare (double newRate)
             dubGain = dubTarget = 0.0f;
             bumpGeneration();
         }
+        autoRun = false;
+        autoPasses = autoPassesLeft = 0;
+        rhythm.reset();
         mainHeld = stopHeld = false;
         scheduled = Scheduled::None;
         heldKind = 0;
@@ -98,7 +101,7 @@ void LooperEngine::prepare (double newRate)
     holdSamples = (int) (0.8 * sampleRate);
     tapSamples = (int) (0.4 * sampleRate);
     smoothing = 1.0f - (float) std::exp (-1.0 / (0.01 * sampleRate));
-    clickDecay = (float) std::exp (-1.0 / (0.012 * sampleRate));
+    rhythm.prepare (sampleRate);
 
     for (auto& r : ring)
         r.assign ((size_t) ringSize, 0.0f);
@@ -327,6 +330,7 @@ bool LooperEngine::acquire (int kind, bool audioStopped)
         if (state == State::Overdubbing)
             state = State::Playing;
         dubGain = dubTarget = 0.0f;
+        autoRun = false;
 
         if (kind == holdExclusive)
         {
@@ -762,14 +766,19 @@ void LooperEngine::startRecording (bool withPreRoll) noexcept
 
     recPos = pre;
     targetLength = 0;
-    recordBpm = cur.sync ? bpm : 0.0;
+    recordBpm = (cur.sync || autoRun) ? bpm : 0.0;
 
-    if (cur.sync)
+    if (cur.sync || autoRun)
     {
-        const double beats = cur.fixedBars > 0.0 ? cur.fixedBars * beatsPerBar : cur.fixedBeats;
+        double beats = cur.fixedBars > 0.0 ? cur.fixedBars * beatsPerBar : cur.fixedBeats;
+        if (autoRun && beats <= 0.0)
+            beats = 4.0 * beatsPerBar; // an auto loop always has a length: four bars unless one is chosen
+
         if (beats > 0.0)
         {
-            const double samples = beats * 60.0 / bpm * sampleRate;
+            double samples = beats * 60.0 / bpm * sampleRate;
+            if (autoRun)
+                samples = std::min (samples, (double) maxSamples);
             if (samples >= (double) minLength && samples <= (double) maxSamples)
                 targetLength = (int) std::llround (samples);
         }
@@ -778,6 +787,39 @@ void LooperEngine::startRecording (bool withPreRoll) noexcept
     state = State::Recording;
     scheduled = Scheduled::None;
     armThreshold = false;
+}
+
+void LooperEngine::startAutoLoop() noexcept
+{
+    autoRun = true;
+    autoPasses = autoPassesLeft = 0;
+    state = State::Armed;
+    armThreshold = false;
+    scheduled = Scheduled::StartRecord;
+
+    // When nothing keeps time yet (no host transport, no rhythm playing), the first bar starts now.
+    placeAutoStart (! hostPlaying && ! cur.click);
+}
+
+void LooperEngine::placeAutoStart (bool restartClock) noexcept
+{
+    const int bars = std::clamp (cur.countInBars, 0, 8);
+
+    if (restartClock)
+    {
+        grid = 0.0;
+        lastBeatIndex = lastBarIndex = -1.0;
+        recordAt = bars * beatsPerBar;
+    }
+    else
+    {
+        // The first bar line at least `bars` bars away (with half a beat of slack, so that a press
+        // just after a bar line doesn't wait a whole extra bar).
+        const double earliest = grid + bars * beatsPerBar - (bars > 0 ? 0.5 : 0.0);
+        recordAt = beatsPerBar * std::ceil (earliest / beatsPerBar - 1.0e-9);
+    }
+
+    countInLength = std::max (0.0, recordAt - grid);
 }
 
 void LooperEngine::closeLoop() noexcept
@@ -818,8 +860,19 @@ void LooperEngine::closeLoop() noexcept
     bumpGeneration();
     loopId.fetch_add (1);
 
-    if (cur.overdubAfterRecord)
+    if (autoRun)
+    {
+        // Auto loop: the layers follow straight away, one loop cycle each.
+        autoPasses = autoPassesLeft = std::clamp (cur.autoLayers, 0, 8);
+        if (autoPassesLeft > 0)
+            startOverdub();
+        else
+            autoRun = false;
+    }
+    else if (cur.overdubAfterRecord)
+    {
         startOverdub();
+    }
 }
 
 void LooperEngine::startPlayback() noexcept
@@ -864,6 +917,7 @@ void LooperEngine::endOverdub() noexcept
 
 void LooperEngine::beginStop() noexcept
 {
+    autoRun = false;
     if (state != State::Playing)
         return;
 
@@ -897,6 +951,7 @@ void LooperEngine::cancelStop() noexcept
 
 void LooperEngine::finishStop() noexcept
 {
+    autoRun = false;
     if (pendingActive)
         discardPending();
     if (dubGain > 0.0f || dubTarget > 0.0f)
@@ -915,6 +970,7 @@ void LooperEngine::finishStop() noexcept
 void LooperEngine::requestClear() noexcept
 {
     lastPressEligible = false;
+    autoRun = false;
     if (state == State::Empty)
         return;
 
@@ -952,6 +1008,9 @@ void LooperEngine::doClear() noexcept
     sessionActive = undone = false;
     layers = usedChunks = dirtyChunks = restorePending = sweepCursor = 0;
     loopBpm = 0.0;
+    autoRun = false;
+    autoPasses = autoPassesLeft = 0;
+    countInLength = 0.0;
 
     if (hadSomething)
     {
@@ -993,6 +1052,7 @@ void LooperEngine::undoSwitch() noexcept
 void LooperEngine::undoAction() noexcept
 {
     lastPressEligible = false;
+    autoRun = false;
     if (state == State::Armed || state == State::Recording)
     {
         doClear(); // cancel the recording
@@ -1054,6 +1114,10 @@ void LooperEngine::mainPressed() noexcept
     const bool doubleTap = lastPressEligible && (clock - lastMainDownAt) <= tapSamples;
     lastMainDownAt = clock;
 
+    // Pressing during an auto loop takes over: the press does what it always does, and nothing
+    // more happens by itself.
+    autoRun = false;
+
     if (doubleTap)
     {
         // Second press of a double tap: whatever the first press started is taken back, then stop.
@@ -1073,7 +1137,11 @@ void LooperEngine::mainPressed() noexcept
     switch (state)
     {
         case State::Empty:
-            if (cur.autoStart)
+            if (cur.autoLoop)
+            {
+                startAutoLoop();
+            }
+            else if (cur.autoStart)
             {
                 state = State::Armed;
                 armThreshold = true;
@@ -1210,6 +1278,7 @@ void LooperEngine::stopSwitch (bool down) noexcept
 
 void LooperEngine::stopPressed() noexcept
 {
+    autoRun = false;
 
     stopHeld = true;
     stopHoldFired = false;
@@ -1294,6 +1363,16 @@ void LooperEngine::updateTiming (const Timing& t) noexcept
     bool resync = std::abs (newBeatsPerBar - beatsPerBar) > 1.0e-9;
     beatsPerBar = newBeatsPerBar;
 
+    // The time signature only decides how the rhythm groups the beats; when it doesn't match the
+    // bar length, the bar length wins.
+    int numerator = t.numerator, denominator = t.denominator;
+    if (numerator < 1 || denominator < 1 || std::abs (4.0 * numerator / denominator - beatsPerBar) > 1.0e-6)
+    {
+        numerator = std::max (1, (int) std::lround (beatsPerBar));
+        denominator = 4;
+    }
+    meter = { beatsPerBar, numerator, denominator };
+
     if (hostPlaying && std::isfinite (t.hostBeat) && std::isfinite (t.hostBarStart))
     {
         // A beat position whose multiples of beatsPerBar are the host's bar lines.
@@ -1309,6 +1388,10 @@ void LooperEngine::updateTiming (const Timing& t) noexcept
         // A line exactly at the new position still counts.
         lastBeatIndex = std::floor (grid - 1.0e-9);
         lastBarIndex = std::floor ((grid - 1.0e-9) / beatsPerBar);
+
+        // An auto loop counting in starts counting again from the new position.
+        if (autoRun && state == State::Armed && scheduled == Scheduled::StartRecord)
+            placeAutoStart (false);
     }
 
     hostWasPlaying = hostPlaying;
@@ -1343,6 +1426,16 @@ void LooperEngine::publishStatus() noexcept
         inBar += beatsPerBar;
     shared.beatInBar.store (inBar);
     shared.rate.store (sampleRate);
+    shared.numerator.store (meter.numerator);
+    shared.denominator.store (meter.denominator);
+
+    const bool countingIn = autoRun && state == State::Armed && scheduled == Scheduled::StartRecord;
+    shared.autoRunning.store (autoRun);
+    // (if the host's position steps back a little, the count-in takes a moment longer; it is shown as full)
+    shared.countIn.store (countingIn ? std::clamp (recordAt - grid, 0.0, countInLength) : 0.0);
+    shared.countInLength.store (countingIn ? countInLength : 0.0);
+    shared.autoLayers.store (autoRun ? (autoPasses > 0 ? autoPasses : std::clamp (cur.autoLayers, 0, 8)) : 0);
+    shared.autoLayer.store (autoRun && state == State::Overdubbing && autoPasses > 0 ? autoPasses - autoPassesLeft + 1 : 0);
 }
 
 Status LooperEngine::getStatus() const noexcept
@@ -1362,7 +1455,14 @@ Status LooperEngine::getStatus() const noexcept
     s.loopBpm = shared.loopBpm.load();
     s.beatInBar = shared.beatInBar.load();
     s.beatsPerBar = shared.beatsPerBar.load();
+    s.numerator = shared.numerator.load();
+    s.denominator = shared.denominator.load();
     s.generation = generation.load();
+    s.autoRunning = shared.autoRunning.load();
+    s.countIn = shared.countIn.load();
+    s.countInLength = shared.countInLength.load();
+    s.autoLayer = shared.autoLayer.load();
+    s.autoLayers = shared.autoLayers.load();
     return s;
 }
 
@@ -1419,6 +1519,7 @@ void LooperEngine::process (float* left, float* right, int numSamples) noexcept
     }
 
     const bool exclusive = heldKind == holdExclusive;
+    const int pattern = std::clamp (cur.rhythm, 0, RhythmGuide::numPatterns - 1);
     const float levelTarget = std::clamp (cur.level, 0.0f, 4.0f);
     const float monitorTarget = cur.monitor ? 1.0f : 0.0f;
     const float feedback = std::clamp (cur.feedback, 0.0f, 1.0f);
@@ -1462,17 +1563,25 @@ void LooperEngine::process (float* left, float* right, int numSamples) noexcept
 
         if (scheduled != Scheduled::None && ! exclusive)
         {
-            const bool line = cur.quantize == Quantize::Beat ? beatTick : barTick;
-            if (line || ! cur.sync || cur.quantize == Quantize::Off)
-                fireScheduled();
+            if (autoRun && scheduled == Scheduled::StartRecord)
+            {
+                if (grid + 1.0e-9 >= recordAt)
+                    fireScheduled(); // the count-in is over
+            }
+            else
+            {
+                const bool line = cur.quantize == Quantize::Beat ? beatTick : barTick;
+                if (line || ! cur.sync || cur.quantize == Quantize::Off)
+                    fireScheduled();
+            }
         }
 
-        if (beatTick && cur.click)
-        {
-            clickEnv = barTick ? 0.5f : 0.3f;
-            clickPhase = 0.0;
-            clickInc = 6.283185307179586 * (barTick ? 1568.0 : 1046.5) / sampleRate;
-        }
+        // --- the guide rhythm: always when it is switched on, and through an auto loop. A count-in
+        // is counted on the beats; the groove starts with the recording, like a drummer's count-in.
+        const bool countingIn = autoRun && state == State::Armed;
+        const bool groove = cur.click || (autoRun && ! countingIn);
+        const float guide = rhythm.process (grid, meter, pattern, groove, countingIn && ! (cur.click && RhythmGuide::isClick (pattern)),
+                                            cur.rhythmLevel);
 
         // --- auto start
         if (state == State::Armed && armThreshold && std::max (std::abs (inL), std::abs (inR)) > autoStartThreshold)
@@ -1590,6 +1699,21 @@ void LooperEngine::process (float* left, float* right, int numSamples) noexcept
 
             if (wrapped && stopAtEnd)
                 finishStop();
+
+            // Auto loop: each automatic layer lasts one loop cycle.
+            if (wrapped && autoRun && state == State::Overdubbing)
+            {
+                endOverdub();
+                if (--autoPassesLeft > 0)
+                {
+                    startOverdub();
+                }
+                else
+                {
+                    autoRun = false;
+                    autoPasses = 0;
+                }
+            }
         }
 
         // --- playback gain: fades for start, stop and clear
@@ -1610,16 +1734,8 @@ void LooperEngine::process (float* left, float* right, int numSamples) noexcept
         levelSm += smoothing * (levelTarget - levelSm);
         monitorSm += smoothing * (monitorTarget - monitorSm);
 
-        float click = 0.0f;
-        if (clickEnv > 1.0e-4f)
-        {
-            click = clickEnv * (float) std::sin (clickPhase);
-            clickPhase += clickInc;
-            clickEnv *= clickDecay;
-        }
-
-        left[i] = inL * monitorSm + loopL * gain * levelSm + click;
-        right[i] = inR * monitorSm + loopR * gain * levelSm + click;
+        left[i] = inL * monitorSm + loopL * gain * levelSm + guide;
+        right[i] = inR * monitorSm + loopR * gain * levelSm + guide;
 
         // --- history
         ring[0][(size_t) ringPos] = inL;

@@ -6,6 +6,8 @@
 #include <mutex>
 #include <vector>
 
+#include "Rhythm.h"
+
 namespace oap::looper
 {
 
@@ -30,7 +32,17 @@ struct Settings
     double fixedBeats = 0.0;         // fixed recording length in beats ...
     double fixedBars = 0.0;          // ... or in bars (0 and 0 = free length)
     bool autoStart = false;          // recording starts with the first note
-    bool click = false;              // metronome
+
+    bool click = false;              // the guide rhythm plays all the time
+    int rhythm = 0;                  // which one (RhythmGuide patterns; 0 = a click on the beats)
+    float rhythmLevel = 0.7f;
+
+    // Auto loop: one press counts in, records a fixed length (the length above, or 4 bars),
+    // overdubs `autoLayers` more layers one loop cycle each, and plays - hands free, with the
+    // guide rhythm keeping time until the loop plays on its own.
+    bool autoLoop = false;
+    int autoLayers = 0;
+    int countInBars = 1;
 };
 
 /** Tempo information for the current block. */
@@ -38,6 +50,7 @@ struct Timing
 {
     double bpm = 120.0;
     double beatsPerBar = 4.0;        // in quarter notes
+    int numerator = 4, denominator = 4; // the time signature (only how the rhythm groups the beats; beatsPerBar rules)
     bool hostPlaying = false;        // when false the looper runs its own beat clock
     double hostBeat = 0.0;           // quarter-note position at the start of the block
     double hostBarStart = 0.0;       // quarter-note position of the last bar line
@@ -58,14 +71,23 @@ struct Status
     double loopBpm = 0.0;            // tempo the loop was recorded at, 0 = unknown
     double beatInBar = 0.0;
     double beatsPerBar = 4.0;
+    int numerator = 4, denominator = 4;
     std::uint32_t generation = 0;    // changes whenever the loop's content changes
+
+    // auto loop
+    bool autoRunning = false;        // an auto loop is under way (count-in, recording or automatic layers)
+    double countIn = 0.0;            // quarter notes until the recording starts (0 = not counting in)
+    double countInLength = 0.0;      // the whole count-in, in quarter notes
+    int autoLayer = 0;               // the automatic layer being recorded (1-based; 0 = none)
+    int autoLayers = 0;              // how many there are
 };
 
 //==============================================================================
 /** A single-track looper: record, play, overdub with undo/redo, stop modes,
     half/double speed and reverse, overdub feedback, tempo-synced recording
-    (quantised start/stop, fixed lengths, tempo following), auto start and a
-    metronome.
+    (quantised start/stop, fixed lengths, tempo following), auto start, a
+    guide rhythm (clicks or drum grooves), and an auto loop mode that counts
+    in, records and layers by itself.
 
     Real-time rules: process() and the switch functions never allocate, lock
     or wait. Loop memory grows in blocks that another thread hands over
@@ -158,6 +180,8 @@ private:
     bool quantizeActive() const noexcept;
 
     void startRecording (bool withPreRoll) noexcept;
+    void startAutoLoop() noexcept;
+    void placeAutoStart (bool restartClock) noexcept;
     void closeLoop() noexcept;
     void startPlayback() noexcept;
     void startOverdub() noexcept;
@@ -241,8 +265,12 @@ private:
     double bpm = 120.0, beatsPerBar = 4.0, grid = 0.0, beatInc = 0.0;
     double lastBeatIndex = 0.0, lastBarIndex = 0.0;
     bool hostWasPlaying = false, hostPlaying = false;
-    float clickEnv = 0.0f, clickDecay = 0.999f;
-    double clickPhase = 0.0, clickInc = 0.0;
+    RhythmGuide rhythm;
+    RhythmGuide::Meter meter;
+
+    bool autoRun = false;            // an auto loop is under way
+    double recordAt = 0.0, countInLength = 0.0; // auto loop: where the recording starts, and the count-in before it
+    int autoPassesLeft = 0, autoPasses = 0;
 
     float levelSm = 1.0f, monitorSm = 1.0f;
     int heldKind = 0;
@@ -263,6 +291,9 @@ private:
         std::atomic<int> state { 0 }, layers { 0 }, length { 0 }, recPos { 0 }, target { 0 };
         std::atomic<bool> scheduled { false }, stopping { false }, canUndo { false }, canRedo { false };
         std::atomic<double> position { 0.0 }, bpm { 120.0 }, loopBpm { 0.0 }, beatInBar { 0.0 }, beatsPerBar { 4.0 }, rate { 48000.0 };
+        std::atomic<double> countIn { 0.0 }, countInLength { 0.0 };
+        std::atomic<int> numerator { 4 }, denominator { 4 }, autoLayer { 0 }, autoLayers { 0 };
+        std::atomic<bool> autoRunning { false };
     } shared;
 
     LooperEngine (const LooperEngine&) = delete;

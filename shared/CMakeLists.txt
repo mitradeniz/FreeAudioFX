@@ -23,6 +23,7 @@ endfunction()
 # looper engine.
 add_library(oap_fx STATIC
     looper/LooperEngine.cpp
+    looper/Rhythm.cpp
     fx/Effect.cpp
     fx/Registry.cpp
     fx/DriveEffects.cpp
