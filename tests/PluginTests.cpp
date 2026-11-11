@@ -1,8 +1,8 @@
 // Tests for the plugin layer, where the DSP meets the host: the Looper's
 // session state (the loop is saved with the project), sample-rate changes,
-// audio files, switches mapped to parameters, host tempo, bus layouts and the
-// editor. The plugin runs like it does in a DAW: its audio on one thread,
-// everything else on another.
+// audio files, switches mapped to parameters, host tempo, the auto loop and
+// the guide rhythm, bus layouts and the editor. The plugin runs like it does
+// in a DAW: its audio on one thread, everything else on another.
 //
 //   oap_plugin_tests
 
@@ -728,6 +728,75 @@ void testHostTempo()
 }
 
 //==============================================================================
+void testAutoLoopAndRhythm()
+{
+    section ("Looper plugin: auto loop and the guide rhythm");
+
+    LooperProcessor a;
+    Host host (a); // no host tempo: the Tempo and Time Signature controls are used
+    host.set ("tempo", 120.0f);
+    host.set ("timesig", 1.0f);   // 3/4
+    host.set ("autoloop", 3.0f);  // 3 layers
+    host.set ("length", 3.0f);    // 1 bar
+    host.set ("countin", 1.0f);   // 1 bar
+    host.set ("rhythm", 5.0f);    // Rock
+    host.set ("monitor", 0.0f);   // the output is just the rhythm and the loop
+    host.waitSeconds (0.05);
+
+    auto st = a.getStatus();
+    check (! a.isUsingHostTimeSignature() && st.numerator == 3 && st.denominator == 4 && std::abs (st.beatsPerBar - 3.0) < 1.0e-9,
+           "without the host's, the Time Signature control is used");
+
+    host.resetPeaks();
+    host.tap();
+    host.waitSeconds (0.05);
+    st = a.getStatus();
+    check (st.state == State::Armed && st.autoRunning && st.countIn > 2.5 && st.countIn <= 3.0 && std::abs (st.countInLength - 3.0) < 1.0e-9,
+           "one click starts a one-bar count-in");
+    check (host.peakLeft.load() > 0.05f, "the count-in can be heard");
+
+    host.level = 0.5f;
+    check (host.waitForState (State::Recording), "the recording starts after the count-in");
+    check (std::abs (a.getStatus().targetSeconds - 1.5) < 1.0e-6, "one bar of 3/4 at 120 BPM: 1.5 s");
+    check (host.waitFor ([&a] { return a.getStatus().autoLayer == 1; }), "the first automatic layer follows");
+    check (host.waitFor ([&a] { return a.getStatus().autoLayer == 2; }), "then the second");
+    check (host.waitFor ([&a] { return a.getStatus().state == State::Playing && ! a.getStatus().autoRunning; }),
+           "then the loop plays on its own");
+    host.level = 0.0f;
+    st = a.getStatus();
+    check (st.layers == 3 && std::abs (st.lengthSeconds - 1.5) < 1.0e-6, "with three layers, one bar long");
+
+    // (the last beat, on the loop's first downbeat, rings out like a drummer's final hit)
+    host.set ("level", 0.0f);
+    host.waitSeconds (1.5);
+    host.resetPeaks();
+    host.waitSeconds (0.5);
+    check (host.peakLeft.load() < 1.0e-3f, "and the rhythm stops (it isn't switched on)");
+
+    host.set ("click", 1.0f);
+    host.resetPeaks();
+    host.waitSeconds (1.0);
+    check (host.peakLeft.load() > 0.05f, "switched on, the rhythm plays all the time");
+
+    // the new settings are saved with the session
+    juce::MemoryBlock state;
+    a.getStateInformation (state);
+    LooperProcessor b;
+    b.setStateInformation (state.getData(), (int) state.getSize());
+    check (std::abs (parameterValue (b, "autoloop") - 3.0f) < 1.0e-4f && std::abs (parameterValue (b, "rhythm") - 5.0f) < 1.0e-4f
+               && std::abs (parameterValue (b, "timesig") - 1.0f) < 1.0e-4f && std::abs (parameterValue (b, "countin") - 1.0f) < 1.0e-4f,
+           "auto loop, count-in, rhythm and time signature are saved with the session");
+
+    // the host's time signature wins over the control
+    host.bpm = 100.0;
+    host.waitSeconds (0.05);
+    st = a.getStatus();
+    check (a.isUsingHostTimeSignature() && st.numerator == 4 && std::abs (st.beatsPerBar - 4.0) < 1.0e-9,
+           "with a host that gives one, the host's time signature is used");
+    check (host.finite.load(), "(finite)");
+}
+
+//==============================================================================
 void testLayouts()
 {
     section ("Looper plugin: mono and stereo");
@@ -888,6 +957,7 @@ int main()
     testFiles (dir);
     testMappedSwitches();
     testHostTempo();
+    testAutoLoopAndRhythm();
     testLayouts();
     testEditor();
     testLongLoop (dir);

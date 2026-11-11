@@ -56,8 +56,12 @@ public:
 
     juce::ComboBox box;
 
+    /** The widest the drop-down gets (120 by default). */
+    void setMaxBoxWidth (int width) { maxBoxWidth = width; resized(); }
+
 private:
     juce::String caption;
+    int maxBoxWidth = 120;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> attachment;
 };
 

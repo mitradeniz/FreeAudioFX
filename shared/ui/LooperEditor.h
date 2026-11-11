@@ -32,7 +32,7 @@ public:
     /** Brings everything on screen up to date. A timer does this 30 times a second. */
     void refresh();
 
-    static constexpr int baseWidth = 1040, baseHeight = 660;
+    static constexpr int baseWidth = 1040, baseHeight = 760;
 
 private:
     class Backdrop;
@@ -52,6 +52,10 @@ private:
         int quantize = 2;          // 0 off, 1 beat, 2 bar
         juce::String lengthName;   // "2 Bars", empty = free
         float meter = 0.0f;
+        int autoLoop = 0;          // 0 off, else how many layers the auto loop records
+        juce::String autoLength;   // how long an auto loop records ("4 Bars")
+        bool rhythmOn = false, hostMeter = false;
+        juce::String rhythmName;
     };
 
     struct Group
@@ -84,6 +88,8 @@ private:
 
     AmpKnob level, feedback, tempo;
     AmpSwitch monitor, reverse, sync, autoStart, click;
+    AmpKnob rhythmLevel;
+    AmpChoice rhythmPattern, timeSignature, autoLoop, countIn;
     AmpChoice afterRecord, stopMode, speed, quantize, length, switchMode;
     std::vector<Group> groups;
 

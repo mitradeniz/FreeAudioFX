@@ -113,6 +113,26 @@ void saveLooper (const juce::File& dir, float scale)
     play (2.2, 0.5f, 19);
     shot ("looper-overdub.png");
 
+    // An auto loop with the Rock groove: count-in, two bars, then two more layers.
+    const auto set = [&looper] (const char* id, float value)
+    {
+        auto* p = looper.getParameters().getParameter (id);
+        p->setValueNotifyingHost (p->convertTo0to1 (value));
+    };
+    looper.sendSwitch (Switch::clear);
+    play (0.6, 0.0f, 0);
+    set ("autoloop", 3.0f);      // 3 layers
+    set ("length", 4.0f);        // 2 bars
+    set ("rhythm", 5.0f);        // Rock
+    play (0.6, 0.0f, 0);
+    tap();
+    play (1.2, 0.0f, 0);
+    shot ("looper-countin.png");
+    play (0.8, 0.0f, 0);         // the count-in ends
+    play (4.0, 0.6f, 0);         // two bars recorded
+    play (2.6, 0.45f, 7);        // the first automatic layer
+    shot ("looper-auto.png");
+
     looper.editorBeingDeleted (editor.get());
 }
 }

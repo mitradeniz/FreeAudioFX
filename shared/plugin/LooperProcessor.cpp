@@ -5,6 +5,7 @@
 
 #include <cmath>
 #include <cstring>
+#include <iterator>
 #include <limits>
 
 namespace oap
@@ -25,6 +26,9 @@ namespace
     constexpr int flacLevel = 3;
 
     constexpr double minRate = 8000.0, maxRate = 768000.0;
+
+    // The Time Signature choices (used when the host doesn't give one).
+    constexpr int timeSignatures[][2] = { { 4, 4 }, { 3, 4 }, { 2, 4 }, { 5, 4 }, { 6, 8 }, { 7, 8 }, { 9, 8 }, { 12, 8 } };
 
     void releaseSwitches (juce::ValueTree& state)
     {
@@ -95,11 +99,30 @@ juce::AudioProcessorValueTreeState::ParameterLayout LooperProcessor::createLayou
     layout.add (choice ("length", "Record Length",
                         { "Free", "1 Beat", "2 Beats", "1 Bar", "2 Bars", "4 Bars", "8 Bars", "16 Bars" }, 0));
     layout.add (toggle ("autostart", "Auto Start", false));
-    layout.add (toggle ("click", "Click", false));
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { "tempo", 1 }, "Tempo", juce::NormalisableRange<float> (40.0f, 240.0f, 0.1f), 120.0f,
         juce::AudioParameterFloatAttributes().withLabel ("BPM")
             .withStringFromValueFunction ([] (float v, int) { return juce::String (v, 1); })));
+
+    // The guide rhythm ("click" keeps its old ID: it switches the rhythm on and off).
+    layout.add (toggle ("click", "Rhythm", false));
+    {
+        juce::StringArray patterns;
+        for (int i = 0; i < looper::RhythmGuide::numPatterns; ++i)
+            patterns.add (looper::RhythmGuide::patternName (i));
+        layout.add (choice ("rhythm", "Rhythm Pattern", patterns, 0));
+    }
+    layout.add (percent ("rhythmlevel", "Rhythm Level", 100.0f, 70.0f));
+    {
+        juce::StringArray meters;
+        for (const auto& m : timeSignatures)
+            meters.add (juce::String (m[0]) + "/" + juce::String (m[1]));
+        layout.add (choice ("timesig", "Time Signature", meters, 0));
+    }
+
+    // Auto loop: one click counts in, records, adds layers and plays.
+    layout.add (choice ("autoloop", "Auto Loop", { "Off", "1 Layer", "2 Layers", "3 Layers", "4 Layers" }, 0));
+    layout.add (choice ("countin", "Count-in", { "Off", "1 Bar", "2 Bars" }, 1));
 
     // For foot controllers and automation: map these in the host.
     layout.add (choice ("switchmode", "Mapped Switches", { "Momentary", "Latching" }, 0));
@@ -129,6 +152,11 @@ LooperProcessor::LooperProcessor()
     params.length      = parameters.getRawParameterValue ("length");
     params.autoStart   = parameters.getRawParameterValue ("autostart");
     params.click       = parameters.getRawParameterValue ("click");
+    params.rhythm      = parameters.getRawParameterValue ("rhythm");
+    params.rhythmLevel = parameters.getRawParameterValue ("rhythmlevel");
+    params.timeSig     = parameters.getRawParameterValue ("timesig");
+    params.autoLoop    = parameters.getRawParameterValue ("autoloop");
+    params.countIn     = parameters.getRawParameterValue ("countin");
     params.tempo       = parameters.getRawParameterValue ("tempo");
     params.switchMode  = parameters.getRawParameterValue ("switchmode");
     params.mainSwitch  = parameters.getRawParameterValue ("main");
@@ -317,6 +345,13 @@ looper::Settings LooperProcessor::readSettings() const noexcept
 
     s.autoStart = params.autoStart->load() > 0.5f;
     s.click = params.click->load() > 0.5f;
+    s.rhythm = juce::jlimit (0, looper::RhythmGuide::numPatterns - 1, juce::roundToInt (params.rhythm->load()));
+    s.rhythmLevel = params.rhythmLevel->load() * 0.01f;
+
+    const int autoLoop = juce::jlimit (0, 4, juce::roundToInt (params.autoLoop->load()));
+    s.autoLoop = autoLoop > 0;
+    s.autoLayers = juce::jmax (0, autoLoop - 1); // the layers after the first recording
+    s.countInBars = juce::jlimit (0, 2, juce::roundToInt (params.countIn->load()));
     return s;
 }
 
@@ -324,7 +359,12 @@ looper::Timing LooperProcessor::readTiming() noexcept
 {
     looper::Timing t;
     t.bpm = (double) params.tempo->load();
-    bool fromHost = false;
+    bool fromHost = false, meterFromHost = false;
+
+    const auto& chosen = timeSignatures[juce::jlimit (0, (int) std::size (timeSignatures) - 1, juce::roundToInt (params.timeSig->load()))];
+    t.numerator = chosen[0];
+    t.denominator = chosen[1];
+    t.beatsPerBar = 4.0 * chosen[0] / chosen[1];
 
     if (auto* head = getPlayHead())
     {
@@ -340,8 +380,15 @@ looper::Timing LooperProcessor::readTiming() noexcept
             }
 
             if (const auto signature = position->getTimeSignature())
+            {
                 if (signature->numerator > 0 && signature->denominator > 0)
+                {
+                    t.numerator = signature->numerator;
+                    t.denominator = signature->denominator;
                     t.beatsPerBar = 4.0 * (double) signature->numerator / (double) signature->denominator;
+                    meterFromHost = true;
+                }
+            }
 
             if (position->getIsPlaying())
             {
@@ -360,6 +407,7 @@ looper::Timing LooperProcessor::readTiming() noexcept
     }
 
     hostTempo.store (fromHost, std::memory_order_relaxed);
+    hostMeter.store (meterFromHost, std::memory_order_relaxed);
     hostPlaying.store (t.hostPlaying, std::memory_order_relaxed);
     return t;
 }

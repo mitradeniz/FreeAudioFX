@@ -61,6 +61,9 @@ public:
     /** True while the host's transport is running. */
     bool isHostPlaying() const noexcept { return hostPlaying.load(); }
 
+    /** True when the time signature comes from the host, false when the Time Signature control is used. */
+    bool isUsingHostTimeSignature() const noexcept { return hostMeter.load(); }
+
     /** Highest input level since the last call (linear). */
     float takeInputPeak() noexcept { return inputPeak.exchange (0.0f); }
 
@@ -166,6 +169,11 @@ private:
         std::atomic<float>* length = nullptr;
         std::atomic<float>* autoStart = nullptr;
         std::atomic<float>* click = nullptr;
+        std::atomic<float>* rhythm = nullptr;
+        std::atomic<float>* rhythmLevel = nullptr;
+        std::atomic<float>* timeSig = nullptr;
+        std::atomic<float>* autoLoop = nullptr;
+        std::atomic<float>* countIn = nullptr;
         std::atomic<float>* tempo = nullptr;
         std::atomic<float>* switchMode = nullptr;
         std::atomic<float>* mainSwitch = nullptr;
@@ -185,7 +193,7 @@ private:
     std::atomic<bool> resyncSwitches { true }, cancelRecording { false };
     juce::AudioBuffer<float> scratch;
 
-    std::atomic<bool> hostTempo { false }, hostPlaying { false }, prepared { false };
+    std::atomic<bool> hostTempo { false }, hostMeter { false }, hostPlaying { false }, prepared { false };
     std::atomic<float> inputPeak { 0.0f };
     std::atomic<double> currentRate { 48000.0 };
 

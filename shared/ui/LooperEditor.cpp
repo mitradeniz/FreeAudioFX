@@ -19,9 +19,9 @@ namespace
     constexpr float twoPi = juce::MathConstants<float>::twoPi;
 
     // Design-size layout (the whole editor is scaled with the window).
-    const juce::Rectangle<int> leftPanelArea { 20, 70, 284, 570 };
-    const juce::Rectangle<int> displayArea   { 316, 70, 704, 252 };
-    const juce::Rectangle<int> controlsArea  { 316, 334, 704, 306 };
+    const juce::Rectangle<int> leftPanelArea { 20, 70, 284, 670 };
+    const juce::Rectangle<int> displayArea   { 316, 70, 704, 230 };
+    const juce::Rectangle<int> controlsArea  { 316, 312, 704, 428 };
 
     AmpTheme looperTheme()
     {
@@ -46,6 +46,11 @@ namespace
 
     juce::String stateName (const looper::Status& s)
     {
+        if (s.autoRunning && s.state == State::Armed)
+            return "COUNT-IN";
+        if (s.autoLayer > 0 && s.state == State::Overdubbing)
+            return "AUTO LAYER " + juce::String (s.autoLayer + 1) + " OF " + juce::String (s.autoLayers + 1);
+
         switch (s.state)
         {
             case State::Armed:        return "ARMED";
@@ -128,6 +133,16 @@ namespace
     }
 
     constexpr const char* lengthNames[] = { "", "1 Beat", "2 Beats", "1 Bar", "2 Bars", "4 Bars", "8 Bars", "16 Bars" };
+
+    /** The beat a musician counts in this time signature, in quarter notes: a dotted quarter in
+        6/8, 9/8 and 12/8, an eighth in other x/8 bars, otherwise the note value of the denominator. */
+    double countedBeat (int numerator, int denominator)
+    {
+        if (denominator <= 0)
+            return 1.0;
+        const double unit = 4.0 / denominator;
+        return (denominator >= 8 && numerator > 3 && numerator % 3 == 0) ? 3.0 * unit : unit;
+    }
 
     /** A captioned group of controls in a row of settings: each control with its width. */
     struct RowGroup
@@ -275,8 +290,15 @@ public:
                 break;
 
             case State::Armed:
-                to = twoPi;
-                alpha = 0.2f + 0.8f * blink;
+                if (s.countInLength > 0.0)
+                {
+                    to = twoPi * (float) juce::jlimit (0.0, 1.0, 1.0 - s.countIn / s.countInLength); // the count-in fills the ring
+                }
+                else
+                {
+                    to = twoPi;
+                    alpha = 0.2f + 0.8f * blink;
+                }
                 break;
 
             case State::Playing:
@@ -361,11 +383,23 @@ public:
         const float size = 17.0f;
         juce::String caption;
 
+        const int count = s.state == State::Armed && s.countIn > 0.0
+                              ? (int) std::ceil (s.countIn / countedBeat (s.numerator, s.denominator) - 1.0e-6) : 0;
+
         if (action == Action::record)
         {
-            caption = "RECORD";
+            caption = v.autoLoop > 0 ? "AUTO LOOP" : "RECORD";
             g.setColour (recordColour);
             g.fillEllipse (icon.x - size, icon.y - size, size * 2.0f, size * 2.0f);
+        }
+        else if (count > 0)
+        {
+            // counting in: the number of beats to go
+            caption = "CANCEL";
+            g.setColour (recordColour);
+            g.setFont (AmpLookAndFeel::font (46.0f, true));
+            g.drawText (juce::String (count), juce::Rectangle<float> (80.0f, 50.0f).withCentre (icon.translated (0.0f, 2.0f)),
+                        juce::Justification::centred, false);
         }
         else if (action == Action::overdub)
         {
@@ -470,10 +504,13 @@ public:
 
         //==============================================================================
         // the loop
-        g.setColour (juce::Colours::white.withAlpha (0.07f));
-        g.fillRect (wave.getX(), wave.getCentreY() - 0.5f, wave.getWidth(), 1.0f);
-
         const bool hasLoop = s.state == State::Playing || s.state == State::Overdubbing || s.state == State::Stopped;
+        if (hasLoop || s.state == State::Recording)
+        {
+            g.setColour (juce::Colours::white.withAlpha (0.07f));
+            g.fillRect (wave.getX(), wave.getCentreY() - 0.5f, wave.getWidth(), 1.0f);
+        }
+
         const double gridSeconds = s.state == State::Recording ? s.targetSeconds : (hasLoop ? s.lengthSeconds : 0.0);
 
         if (gridSeconds > 0.0 && s.loopBpm > 0.0)
@@ -502,10 +539,30 @@ public:
             lines (bars, 0.16f, 6.0f);
         }
 
-        if (s.state == State::Empty || s.state == State::Armed)
+        if (s.state == State::Armed && s.autoRunning)
+        {
+            // count-in: the beats to go, big
+            const double beat = countedBeat (s.numerator, s.denominator);
+            const int count = (int) std::ceil (s.countIn / beat - 1.0e-6);
+            const float within = (float) (count * beat - s.countIn) / (float) beat; // 0 at each counted beat
+            auto area = wave;
+
+            g.setFont (AmpLookAndFeel::font (84.0f, true));
+            g.setColour (recordColour.withAlpha (count > 0 ? 1.0f - 0.55f * within : 0.4f));
+            g.drawText (count > 0 ? juce::String (count) : juce::String ("..."), area.removeFromTop (area.getHeight() * 0.72f),
+                        juce::Justification::centred, false);
+
+            g.setFont (AmpLookAndFeel::font (14.0f));
+            g.setColour (t.panelTextDim);
+            g.drawText ("Recording " + v.autoLength.toLowerCase() + " starts after the count", area, juce::Justification::centredTop, false);
+        }
+        else if (s.state == State::Empty || s.state == State::Armed)
         {
             juce::String text = "Click the big button and play  -  or drop an audio file here";
-            if (s.state == State::Armed)
+            if (s.state == State::Empty && v.autoLoop > 0)
+                text = "Auto loop: click once, play after the count-in  -  " + v.autoLength.toLowerCase()
+                     + (v.autoLoop > 1 ? ", " + juce::String (v.autoLoop) + " layers" : juce::String());
+            else if (s.state == State::Armed)
                 text = v.autoStart ? "Waiting for your first note..."
                                    : juce::String ("Recording starts on the next ") + (v.quantize == 1 ? "beat" : "bar") + "...";
 
@@ -589,6 +646,10 @@ public:
                 tag (v.speed == 0 ? "HALF SPEED" : "DOUBLE SPEED", t.accent);
             if (v.sync)
                 tag ("SYNC", t.accent);
+            if (v.rhythmOn || s.autoRunning)
+                tag (v.rhythmName.toUpperCase(), overdubColour);
+            if (v.autoLoop > 0)
+                tag ("AUTO", recordColour);
 
             juce::String info;
             if (hasLoop)
@@ -601,6 +662,12 @@ public:
                     info << "     " << (bars.isNotEmpty() ? bars + " at " : juce::String ("recorded at "))
                          << juce::String (s.loopBpm, 1) << " BPM";
                 }
+            }
+            else if (s.state == State::Recording && s.autoRunning && s.targetSeconds > 0.0)
+            {
+                info << "Recording " << v.autoLength.toLowerCase();
+                if (s.autoLayers > 0)
+                    info << ", then " << juce::String (s.autoLayers) << (s.autoLayers == 1 ? " more layer" : " more layers");
             }
             else if (s.state == State::Recording && v.lengthName.isNotEmpty() && s.targetSeconds > 0.0)
             {
@@ -631,10 +698,12 @@ public:
         const auto& t = owner.lookAndFeel.getTheme();
         auto r = getLocalBounds().toFloat();
 
-        // one dot per beat of the bar
-        const int beats = juce::jlimit (1, 12, juce::roundToInt (s.beatsPerBar));
-        const int current = juce::jlimit (0, beats - 1, (int) std::floor (s.beatInBar));
-        const float fade = 1.0f - 0.65f * (float) (s.beatInBar - std::floor (s.beatInBar));
+        // one dot per counted beat of the bar (two in 6/8, seven in 7/8)
+        const double beat = countedBeat (s.numerator, s.denominator);
+        const int beats = juce::jlimit (1, 12, juce::roundToInt (s.beatsPerBar / beat));
+        const double position = s.beatInBar / beat;
+        const int current = juce::jlimit (0, beats - 1, (int) std::floor (position));
+        const float fade = 1.0f - 0.65f * (float) (position - std::floor (position));
         auto dots = r.removeFromRight ((float) beats * 15.0f);
 
         for (int i = 0; i < beats; ++i)
@@ -646,13 +715,15 @@ public:
         }
 
         r.removeFromRight (14.0f);
-        auto text = r.removeFromRight (150.0f);
+        auto text = r.removeFromRight (190.0f);
         g.setFont (AmpLookAndFeel::font (20.0f, true));
         g.setColour (t.headerText);
         g.drawText (juce::String (s.bpm, 1) + " BPM", text.removeFromTop (26.0f), juce::Justification::centredRight, false);
         g.setFont (AmpLookAndFeel::font (10.0f, true).withExtraKerningFactor (0.22f));
         g.setColour (t.headerText.withAlpha (0.5f));
-        g.drawText (v.hostTempo ? "HOST TEMPO" : "TEMPO KNOB", text, juce::Justification::centredRight, false);
+        g.drawText (juce::String (v.hostTempo ? "HOST TEMPO" : "TEMPO KNOB") + "  /  " + juce::String (s.numerator) + "/"
+                        + juce::String (s.denominator),
+                    text, juce::Justification::centredRight, false);
     }
 
 private:
@@ -671,7 +742,12 @@ LooperEditor::LooperEditor (LooperProcessor& p)
       reverse (p.getParameters(), "reverse", "Reverse"),
       sync (p.getParameters(), "sync", "Sync"),
       autoStart (p.getParameters(), "autostart", "Auto Start"),
-      click (p.getParameters(), "click", "Click"),
+      click (p.getParameters(), "click", "Rhythm"),
+      rhythmLevel (p.getParameters(), "rhythmlevel", "Level"),
+      rhythmPattern (p.getParameters(), "rhythm", "Pattern"),
+      timeSignature (p.getParameters(), "timesig", "Time"),
+      autoLoop (p.getParameters(), "autoloop", "Auto Loop"),
+      countIn (p.getParameters(), "countin", "Count-in"),
       afterRecord (p.getParameters(), "afterrec", "After Rec"),
       stopMode (p.getParameters(), "stopmode", "Stop"),
       speed (p.getParameters(), "speed", "Speed"),
@@ -783,9 +859,21 @@ LooperEditor::LooperEditor (LooperProcessor& p)
         }
     }
 
-    groups.push_back ({ "LEVELS", { left + 14, 464, panelWidth - 28, 16 } });
-    level.setBounds (left + 30, 488, 106, 132);
-    feedback.setBounds (left + panelWidth - 30 - 106, 488, 106, 132);
+    // Auto loop: one click, and the looper counts in, records and layers by itself.
+    groups.push_back ({ "AUTO LOOP", { left + 14, 462, panelWidth - 28, 16 } });
+    autoLoop.setBounds (left + 18, 482, 136, 62);
+    countIn.setBounds (left + panelWidth - 18 - 112, 482, 112, 62);
+    autoLoop.setMaxBoxWidth (128);
+    autoLoop.box.setTooltip ("One click does it all: a count-in, then the recording (as long as Length says, or 4 bars), "
+                             "then more layers one loop cycle each if you ask for them - and the loop plays. "
+                             "The rhythm keeps time until then. Click any time to take over.");
+    countIn.box.setTooltip ("How many bars the auto loop counts in before it records");
+    content.addAndMakeVisible (autoLoop);
+    content.addAndMakeVisible (countIn);
+
+    groups.push_back ({ "LEVELS", { left + 14, 562, panelWidth - 28, 16 } });
+    level.setBounds (left + 30, 584, 106, 132);
+    feedback.setBounds (left + panelWidth - 30 - 106, 584, 106, 132);
     level.slider.setTooltip ("How loud the loop plays");
     feedback.slider.setTooltip ("How much of the loop survives each overdub pass. Below 100 % old layers fade away while you add new ones.");
     content.addAndMakeVisible (level);
@@ -813,7 +901,7 @@ LooperEditor::LooperEditor (LooperProcessor& p)
             const int start = x;
             for (const auto& control : group.controls)
             {
-                control.first->setBounds (x, y + 22, control.second, 116);
+                control.first->setBounds (x, y + 20, control.second, 108);
                 content.addAndMakeVisible (*control.first);
                 x += control.second;
             }
@@ -822,12 +910,15 @@ LooperEditor::LooperEditor (LooperProcessor& p)
         }
     };
 
-    row (346, { { "INPUT",     { { &monitor, 92 } } },
+    row (324, { { "INPUT",     { { &monitor, 92 } } },
                 { "TRANSPORT", { { &afterRecord, 118 }, { &stopMode, 118 } } },
                 { "PLAYBACK",  { { &speed, 108 }, { &reverse, 84 } } },
                 { "CONTROLLER", { { &switchMode, 122 } } } });
 
-    row (492, { { "TEMPO", { { &sync, 92 }, { &quantize, 112 }, { &length, 118 }, { &autoStart, 104 }, { &click, 92 }, { &tempo, 106 } } } });
+    row (462, { { "TEMPO", { { &sync, 96 }, { &quantize, 124 }, { &length, 124 }, { &autoStart, 104 }, { &tempo, 112 } } } });
+
+    row (600, { { "GUIDE RHYTHM", { { &click, 96 }, { &rhythmPattern, 164 }, { &timeSignature, 112 }, { &rhythmLevel, 112 } } } });
+    rhythmPattern.setMaxBoxWidth (150);
 
     monitor.button.setTooltip ("Pass your playing through to the output. Switch it off if you already hear yourself another way.");
     afterRecord.box.setTooltip ("What happens when you close the first recording: play the loop, or keep recording on top of it");
@@ -841,7 +932,11 @@ LooperEditor::LooperEditor (LooperProcessor& p)
     quantize.box.setTooltip ("With Sync on, and while the DAW plays or the click is on: recording and playback start and stop on the next beat or bar");
     length.box.setTooltip ("With Sync on: record exactly this long, then carry straight on (Free = until you click again)");
     autoStart.button.setTooltip ("Recording waits for your first note: click, get ready, play");
-    click.button.setTooltip ("Metronome in the looper's output (not recorded into the loop)");
+    click.button.setTooltip ("Plays the rhythm all the time, in the looper's output (it is never recorded into the loop). "
+                             "Without it the rhythm only plays through an auto loop.");
+    rhythmPattern.box.setTooltip ("A click (on the beats, or with eighths, triplets, sixteenths or a shuffle) or a simple drum groove");
+    timeSignature.box.setTooltip ("Used when the host doesn't give one (the standalone app)");
+    rhythmLevel.slider.setTooltip ("How loud the rhythm plays");
     tempo.slider.setTooltip ("The looper's own tempo, used when the host doesn't give one (the standalone app)");
 
     sendLookAndFeelChange();
@@ -904,6 +999,9 @@ void LooperEditor::refresh()
                       || before.sync != view.sync || before.autoStart != view.autoStart || before.reverse != view.reverse
                       || before.speed != view.speed || before.quantize != view.quantize
                       || before.overdubAfterRecord != view.overdubAfterRecord || before.lengthName != view.lengthName
+                      || before.autoLoop != view.autoLoop || before.autoLength != view.autoLength
+                      || before.rhythmOn != view.rhythmOn || before.rhythmName != view.rhythmName
+                      || a.autoRunning != b.autoRunning || a.autoLayer != b.autoLayer
                       || std::abs (before.meter - view.meter) > 1.0e-4f;
 
     if (moving || changed || mainButton->isMouseButtonDown())
@@ -913,7 +1011,8 @@ void LooperEditor::refresh()
     }
 
     if (view.beatAudible || before.beatAudible || std::abs (a.bpm - b.bpm) > 1.0e-6
-        || std::abs (a.beatsPerBar - b.beatsPerBar) > 1.0e-9 || before.hostTempo != view.hostTempo)
+        || std::abs (a.beatsPerBar - b.beatsPerBar) > 1.0e-9 || before.hostTempo != view.hostTempo
+        || a.numerator != b.numerator || a.denominator != b.denominator)
         tempoReadout->repaint();
 }
 
@@ -932,12 +1031,18 @@ void LooperEditor::updateView()
     v.speed = juce::roundToInt (parameter ("speed"));
     v.quantize = juce::roundToInt (parameter ("quantize"));
     v.hostTempo = looper.isUsingHostTempo();
-    v.beatAudible = looper.isHostPlaying() || v.click;
-    v.quantising = v.sync && v.quantize != 0 && v.beatAudible;
+    v.hostMeter = looper.isUsingHostTimeSignature();
+    v.quantising = v.sync && v.quantize != 0 && (looper.isHostPlaying() || v.click);
+    v.beatAudible = looper.isHostPlaying() || v.click || v.status.autoRunning;
+
+    v.autoLoop = juce::jlimit (0, 4, juce::roundToInt (parameter ("autoloop")));
+    v.rhythmOn = v.click;
+    v.rhythmName = looper::RhythmGuide::patternName (juce::roundToInt (parameter ("rhythm")));
 
     const int lengthIndex = juce::jlimit (0, 7, juce::roundToInt (parameter ("length")));
-    if (v.sync && lengthIndex > 0)
+    if ((v.sync || v.autoLoop > 0) && lengthIndex > 0)
         v.lengthName = lengthNames[lengthIndex];
+    v.autoLength = lengthIndex > 0 ? juce::String (lengthNames[lengthIndex]) : juce::String ("4 Bars");
 
     v.meter = juce::jmax (input, view.meter * 0.8f);
     if (v.meter < 1.0e-4f)
@@ -1015,14 +1120,18 @@ void LooperEditor::updateControls()
     halveButton.setEnabled (settled);
     saveButton.setEnabled (settled);
 
-    // These only do something with Sync on; the Tempo knob only without a host tempo.
-    for (auto* c : std::initializer_list<juce::Component*> { &quantize, &length })
+    // Controls that do nothing in the current setup are greyed out: Quantize without Sync, Length
+    // without Sync or an auto loop, Count-in without an auto loop, Tempo and Time with the host's.
+    const auto enable = [] (juce::Component& c, bool on)
     {
-        c->setEnabled (view.sync);
-        c->setAlpha (view.sync ? 1.0f : 0.4f);
-    }
-    tempo.setEnabled (! view.hostTempo);
-    tempo.setAlpha (view.hostTempo ? 0.4f : 1.0f);
+        c.setEnabled (on);
+        c.setAlpha (on ? 1.0f : 0.4f);
+    };
+    enable (quantize, view.sync);
+    enable (length, view.sync || view.autoLoop > 0);
+    enable (countIn, view.autoLoop > 0);
+    enable (tempo, ! view.hostTempo);
+    enable (timeSignature, ! view.hostMeter);
 
     const bool showingMessage = message.isNotEmpty() && now - messageAt < 4500u;
     if (! showingMessage)
@@ -1038,6 +1147,23 @@ juce::String LooperEditor::hintText() const
 {
     const auto& s = view.status;
     const juce::String unit = view.quantize == 1 ? "beat" : "bar";
+
+    // auto loop
+    if (s.state == State::Empty && view.autoLoop > 0)
+        return "Click once: the looper counts in,\nrecords " + view.autoLength.toLowerCase()
+             + (view.autoLoop > 1 ? " and " + juce::String (view.autoLoop - 1) + (view.autoLoop == 2 ? " more layer" : " more layers")
+                                  : juce::String())
+             + ", then plays";
+    if (s.autoRunning)
+    {
+        if (s.state == State::Armed)
+            return "Get ready to play...\nClick to cancel";
+        if (s.state == State::Recording)
+            return "Recording " + view.autoLength.toLowerCase() + "\nClick to take over";
+        if (s.state == State::Overdubbing)
+            return "Layer " + juce::String (s.autoLayer + 1) + " of " + juce::String (s.autoLayers + 1)
+                 + ": play something new\nClick to take over";
+    }
 
     switch (s.state)
     {

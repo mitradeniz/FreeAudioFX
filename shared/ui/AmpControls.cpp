@@ -104,7 +104,7 @@ void AmpChoice::resized()
 {
     auto r = getLocalBounds();
     r.removeFromTop (20);
-    box.setBounds (r.withSizeKeepingCentre (juce::jmin (r.getWidth() - 8, 120), juce::jmin (r.getHeight(), 28)));
+    box.setBounds (r.withSizeKeepingCentre (juce::jmin (r.getWidth() - 8, maxBoxWidth), juce::jmin (r.getHeight(), 28)));
 }
 
 //==============================================================================
