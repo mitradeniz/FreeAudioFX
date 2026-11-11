@@ -189,19 +189,20 @@ cmake --build build --target oap_dsp_tests oap_plugin_tests
 ./build/tests/oap_plugin_tests_artefacts/Release/oap_plugin_tests
 ```
 
-`oap_dsp_tests` runs about 1,400 checks in a couple of minutes: every amp, effect
+`oap_dsp_tests` runs about 1,500 checks in a couple of minutes: every amp, effect
 amp and pedal at several sample rates and block sizes with random automation,
 decay to silence, output levels, aliasing, cabinets and impulse responses,
 gates and CPU use, and the looper engine (sample-exact playback, undo, tempo
-sync, other threads working on the loop while audio runs). Add
+sync, the auto loop and the rhythms, other threads working on the loop while
+audio runs). Add
 `--render demos` to also write example WAV files (a synthetic guitar played
 through the Drive and Clean amps) into a `demos/` folder, or `--only looper`
 to run just the looper's tests.
 
 `oap_plugin_tests` runs the Looper plugin the way a host does, audio on one
 thread and everything else on another: the loop saved with the session and
-restored, sample-rate changes, audio files, host tempo, switches mapped to
-parameters, and the editor. It takes a few seconds.
+restored, sample-rate changes, audio files, host tempo, the auto loop,
+switches mapped to parameters, and the editor. It takes a few seconds.
 
 With CTest: `ctest --test-dir build`.
 

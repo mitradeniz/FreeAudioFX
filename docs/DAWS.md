@@ -87,7 +87,9 @@ automate them:
 Then set the Looper's **Switches** control to match your controller:
 **Momentary** if the parameter should be on only while your foot is down
 (click, double-click and hold then work like with the mouse), or **Latching**
-if your controller flips it with every press. Details in the
+if your controller flips it with every press. With **Auto Loop** on, a
+single press of the footswitch starts a whole auto loop: count-in,
+recording and layers. Details in the
 [Looper manual](plugins/Looper.md#foot-controllers-and-automation).
 
 ## Standalone apps

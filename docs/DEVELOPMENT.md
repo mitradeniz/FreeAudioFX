@@ -28,7 +28,8 @@ FreeAudioFX/
 │   │   ├── EffectAmpEngine.*   # the signal path built from a model
 │   │   └── EffectAmp{Processor,Editor}.*  # generic plugin wrapper and faceplate
 │   ├── looper/                 # looper (plain C++17, no JUCE)
-│   │   ├── LooperEngine.*      # record, play, overdub, undo, tempo sync; lock-free towards other threads
+│   │   ├── LooperEngine.*      # record, play, overdub, undo, tempo sync, auto loop; lock-free towards other threads
+│   │   ├── Rhythm.*            # the guide rhythm: clicks and drum grooves, synthesised
 │   │   └── LoopUtils.h         # sample-rate conversion of a loop, waveform overview
 │   ├── art/                    # one SVG artwork per amp (generated, embedded into the plugins)
 │   ├── plugin/                 # AmpProcessorBase, PedalProcessor, PedalboardProcessor, LooperProcessor
@@ -142,7 +143,10 @@ threads all the time, so its parts are split strictly by thread:
 - **`looper::LooperEngine`** (plain C++17) is everything the audio thread
   does: the state machine behind the switches (click, double-click, hold),
   recording, the varispeed play and record heads, copy-on-write undo, the
-  tempo grid. Its audio-thread functions never allocate, lock or wait.
+  tempo grid, the auto loop (count-in, fixed length, one automatic layer per
+  loop cycle) and the guide rhythm (`looper::RhythmGuide`, which turns the
+  beat grid into clicks and drum hits). Its audio-thread functions never
+  allocate, lock or wait.
   Other threads use `serviceMemory()` (hands over loop memory ahead of the
   recording) and `copyLoop()` / `loadLoop()` / `doubleLength()` /
   `halveLength()`, which ask the audio thread for a *hold* through a few
@@ -214,15 +218,17 @@ threads all the time, so its parts are split strictly by thread:
   calibrated levels, FX knobs, gates),
 - `LooperTests.cpp`: the looper engine (sample-exact playback and loop point,
   overdub layers, undo/redo, the switch gestures, stop modes, speed and
-  reverse, tempo sync, memory limits, and copying / loading / resizing the
-  loop from another thread while audio runs, starts and stops) and the loop
+  reverse, tempo sync, the auto loop and count-in, every rhythm pattern and
+  time signature, memory limits, and copying / loading / resizing the loop
+  from another thread while audio runs, starts and stops) and the loop
   helpers. `oap_dsp_tests --only looper` runs just these.
 
 `oap_plugin_tests` (`PluginTests.cpp`) tests the plugin layer: it runs the
 Looper like a host does, with its audio on a separate thread, and checks the
 session state (the loop is saved and restored exactly, also at awkward
-moments and from broken data), sample-rate changes, audio files, host tempo,
-switches mapped to parameters, bus layouts and the editor.
+moments and from broken data), sample-rate changes, audio files, host tempo
+and time signature, the auto loop, switches mapped to parameters, bus
+layouts and the editor.
 
 Run them after every change to the DSP or to a processor. For host-level testing,
 [pluginval](https://github.com/Tracktion/pluginval) is recommended:

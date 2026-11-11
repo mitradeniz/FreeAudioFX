@@ -218,7 +218,9 @@ Pick any pedal for each of eight slots, reorder them with **<** and **>**, switc
 Click the big button to record, click again and the phrase repeats, click again to play on top of it. Made for the mouse, with everything a looper needs for real playing:
 
 - **Overdub, undo and redo**, double-click to stop, hold to undo: the big button works like a looper's footswitch.
-- **In time with your project:** start and stop on the bar line while your DAW plays, record exact lengths (*2 beats*, *4 bars*…) that close by themselves, follow tempo changes, auto-start on your first note, and a click.
+- **In time with your project:** start and stop on the bar line while your DAW plays, record exact lengths (*2 beats*, *4 bars*…) that close by themselves, follow tempo changes, auto-start on your first note.
+- **Auto loop, hands free:** one click, a count-in, and the Looper records a fixed length and then up to three more layers one loop cycle each, by itself.
+- **A guide rhythm:** clicks (also 8ths, triplets, 16ths, shuffle, in any time signature) or simple drum grooves (rock, pop, funk, ballad, disco, shuffle, reggae, metal, bossa nova), never recorded into the loop.
 - **Your loop is saved with the project**, and as a WAV file whenever you like. Drop an audio file on the window to loop it.
 - **Half speed, double speed, reverse**, overdub feedback for loops that evolve, three ways to stop, and ×2 to make room for a longer layer.
 - Switch parameters for **foot controllers**. Also a standalone app for practising.
@@ -251,7 +253,7 @@ Click the big button to record, click again and the phrase repeats, click again 
 | Middle-Eastern melodies | 🏺 Pharaoh Amp / 🕌 Persian Amp | single-string slides / tremolo picking |
 | Worship, ambient swells | ⛪ Choir Amp | **Choir** 8, volume swells |
 | Your own rig | 🧩 Pedalboard → any amp | the default board |
-| Practising solos over your own chords, building songs in layers | 🔁 Looper, after the amp | click the big button, play, click again |
+| Practising solos over your own chords, building songs in layers | 🔁 Looper, after the amp | click the big button, play, click again; or **Auto Loop** *3 Layers* with the *Rock* pattern |
 
 </details>
 
@@ -723,7 +725,7 @@ flowchart LR
 - **Low latency:** 6 samples for the amps, up to about 1 ms for the oversampled drive pedals, always reported to your DAW for compensation.
 - **Light on the CPU** (one core at 48 kHz, measured on an x86 machine): amps 1.5-5 %, effect amps 2-8 %, pedals 0.05-3.5 %.
 - **A looper that never makes the audio wait:** the loop's memory is prepared ahead of the recording by another thread, undo copies only what an overdub touches, and saving, loading and resizing the loop talk to the audio thread without locks.
-- **Tested:** about 1,500 automated checks. DSP: stability at 44.1-192 kHz with random automation, silence, aliasing, levels, impulse responses, every effect amp knob. Looper: sample-exact playback, undo, tempo sync, and other threads working on the loop while audio runs (also under thread and memory sanitizers). Plugin layer: the Looper's session state, audio files, host tempo and mapped switches. And every plugin passes [pluginval](https://github.com/Tracktion/pluginval) at its strictest level.
+- **Tested:** about 1,600 automated checks. DSP: stability at 44.1-192 kHz with random automation, silence, aliasing, levels, impulse responses, every effect amp knob. Looper: sample-exact playback, undo, tempo sync, the auto loop and the rhythms, and other threads working on the loop while audio runs (also under thread and memory sanitizers). Plugin layer: the Looper's session state, audio files, host tempo, auto loop and mapped switches. And every plugin passes [pluginval](https://github.com/Tracktion/pluginval) at its strictest level.
 
 Want to dig deeper? 📚 [Plugin manuals](docs/plugins/) · [Using the plugins in your DAW](docs/DAWS.md) · [Building on every platform](docs/BUILDING.md) · [Developer guide](docs/DEVELOPMENT.md)
 
