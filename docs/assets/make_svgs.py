@@ -104,7 +104,7 @@ def hero():
 <!-- title -->
 <text x="64" y="118" font-family="{FONT}" font-weight="800" font-size="70" fill="#f5f5f5">Open Audio</text>
 <text x="64" y="192" font-family="{FONT}" font-weight="800" font-size="70" fill="url(#title)">Plugins</text>
-<text x="66" y="238" font-family="{FONT}" font-size="23" fill="#a9abb2">Free amps, effect amps &amp; pedals for your DAW</text>
+<text x="66" y="238" font-family="{FONT}" font-size="23" fill="#a9abb2">Free amps, pedals &amp; a looper for your DAW</text>
 
 <!-- chips -->
 <g font-family="{FONT}" font-size="15" font-weight="700">

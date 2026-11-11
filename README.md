@@ -25,6 +25,7 @@
   <a href="#quick-start">Quick start</a> ·
   <a href="#step-by-step">Step-by-step guide</a> ·
   <a href="#tone-recipes">Tone recipes</a> ·
+  <a href="#looping">Looping</a> ·
   <a href="#troubleshooting">Troubleshooting</a> ·
   <a href="#roadmap">Roadmap</a>
 </p>
@@ -535,6 +536,7 @@ The idea is the same in every DAW. Here's Ableton Live as the example:
 - Hold **Shift** while dragging for fine adjustments.
 - Drag the bottom-right corner to make the window bigger or smaller.
 - Try the [tone recipes](#tone-recipes) below as starting points.
+- Loop yourself: put the **OAP Looper** last on the track, after the amp, and [build a song in layers](#looping).
 
 ---
 
@@ -579,6 +581,45 @@ Have a favourite cab IR? Click **Load IR…** under the amp and pick a `.wav`, `
 Its volume is matched to the built-in cabs automatically, and the file is remembered with your project.
 This works on every amp and effect amp.
 Want to use a separate cabinet plugin instead? Set **Cabinet** to **Off**.
+
+---
+
+<a id="looping"></a>
+## 🔁 Looping
+
+<p align="center">
+  <img src="docs/assets/looper-auto.png" width="100%" alt="OAP Looper recording the second of three layers of an auto loop, with the Rock groove">
+</p>
+
+The **OAP Looper** turns one guitar into a band. Put it **last on your guitar track, after the amp**, so every layer keeps the sound it was played with, and you can change your tone for the next one.
+
+**By hand, like a loop pedal:**
+
+1. Click the big button and play a phrase: a chord progression, a riff.
+2. Click again on the first beat of the repeat. The loop plays, and keeps playing.
+3. Click to play a second part on top (*overdub*), click again when it's done. Add as many layers as you like.
+4. **Hold** the button to undo the last layer, **double-click** to stop. Hold it while stopped to start again from nothing.
+
+**Hands free, with an auto loop:**
+
+1. Set **Auto Loop** to *3 Layers* and **Length** to *4 Bars*, pick a **Pattern** (say *Rock*), and set the **Tempo** (in a DAW, the DAW's tempo is used).
+2. Click once and get your hands on the strings: the Looper counts in one bar, with the numbers on the screen.
+3. Play the chords for four bars, the bass line on the low strings for the next four, a melody for the four after that. The Looper moves on by itself, in time with the drums.
+4. Then the loop plays on its own and the drums stop: solo over your band. Click any time to take over.
+
+**Looping recipes:**
+
+| Recipe | How |
+| --- | --- |
+| 🎓 **Practise solos over your own chords** | Auto Loop *2 Layers*, Length *4 Bars*, Pattern *Rock* or *Ballad*: chords, then a bass line, then solo over it. |
+| 🥁 **Four bars in time with your DAW's drums** | Sync on, Quantize *Bar*, Length *4 Bars*. Start the DAW, click once: the loop starts and closes on the bar lines. |
+| 🌌 **Evolving ambient loop** | Dream Amp → Looper with **Feedback** at 70 %: keep overdubbing, and the oldest layers slowly fade away. |
+| 🔙 **Backwards guitar** | Record a phrase, switch **Reverse** on, overdub a melody, switch Reverse off: the new layer plays backwards. |
+| 🦋 **Octave-up sparkle** | Switch **Speed** to *Half*, overdub a slow line, back to *Normal*: it plays twice as fast, an octave higher. |
+| 🧱 **Verse, then a longer chorus** | Record two bars, click **×2**, and overdub a part that spans all four. |
+| 💾 **Keep the loop** | It's saved with your project anyway; **SAVE** also writes a WAV file you can drag into the arrangement. |
+
+📖 Everything else is in the [Looper manual](docs/plugins/Looper.md): every button and setting, the guide rhythms, working in time with your DAW, and foot controllers.
 
 ---
 
@@ -643,7 +684,7 @@ Raise the **Buffer Size** (256), and close other heavy apps. Make sure you built
 <summary><b>The Looper waits instead of recording, or stops recording by itself</b></summary>
 <br>
 
-That is **Sync** at work. While your DAW is playing (or the Looper's **Click** is on), recording starts and ends on the next bar line, so the big button blinks until then: set **Quantize** to *Off* to act at once, or switch **Sync** off for a plain looper. If the recording ends by itself, **Length** is set to a fixed number of beats or bars: choose *Free*. And with **Auto Start** on, the Looper waits for your first note. 📖 [In time with your project](docs/plugins/Looper.md#in-time-with-your-project)
+That is **Sync** at work. While your DAW is playing (or the Looper's **Rhythm** is on), recording starts and ends on the next bar line, so the big button blinks until then: set **Quantize** to *Off* to act at once, or switch **Sync** off for a plain looper. If the recording ends by itself, **Length** is set to a fixed number of beats or bars: choose *Free*. With **Auto Start** on, the Looper waits for your first note, and with **Auto Loop** on it counts in first and then records, layers and stops recording by itself (set it to *Off* to loop by hand). 📖 [In time with your project](docs/plugins/Looper.md#in-time-with-your-project)
 
 </details>
 
